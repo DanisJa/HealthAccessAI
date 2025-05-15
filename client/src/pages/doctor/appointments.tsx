@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { useHospital } from "@/hooks/use-hospital";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";

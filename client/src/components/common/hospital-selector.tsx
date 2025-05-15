@@ -55,7 +55,7 @@ export function HospitalSelector({ onChange, className = '' }: HospitalSelectorP
 
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
-      <BuildingHospital className="h-4 w-4 text-muted-foreground" />
+      <Building2 className="h-4 w-4 text-muted-foreground" />
       <Select
         value={selectedHospital?.id.toString()}
         onValueChange={handleHospitalChange}
