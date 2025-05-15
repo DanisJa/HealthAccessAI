@@ -302,20 +302,29 @@ export class MemStorage implements IStorage {
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Enrich with patient information
-    return todayAppointments.map(appointment => {
+    // Fetch and prepare related data for each appointment
+    return Promise.all(todayAppointments.map(async appointment => {
       const patient = this.users.get(appointment.patientId);
+      const hospital = await this.getHospital(appointment.hospitalId);
       
       return {
         ...appointment,
         patient: patient ? {
+          id: patient.id,
           firstName: patient.firstName,
-          lastName: patient.lastName
+          lastName: patient.lastName,
+          dateOfBirth: patient.dateOfBirth,
+          phone: patient.phone
         } : undefined,
-        // Add random appointment type for demo
-        type: ['Check-up', 'New Patient', 'Urgent'][Math.floor(Math.random() * 3)]
+        hospital: hospital ? {
+          id: hospital.id,
+          name: hospital.name,
+          type: hospital.type,
+          municipality: hospital.municipality,
+          address: hospital.address
+        } : undefined
       };
-    });
+    }));
   }
   
   async getDoctorAppointments(doctorId: number, tab: string, date?: string): Promise<any[]> {
@@ -326,12 +335,16 @@ export class MemStorage implements IStorage {
     if (tab === 'upcoming') {
       appointments = appointments.filter(a => 
         new Date(a.date).getTime() >= new Date().getTime() && 
-        a.status === 'scheduled'
+        (a.status === 'pending' || a.status === 'approved')
       );
     } else if (tab === 'completed') {
       appointments = appointments.filter(a => a.status === 'completed');
     } else if (tab === 'cancelled') {
       appointments = appointments.filter(a => a.status === 'cancelled');
+    } else if (tab === 'pending') {
+      appointments = appointments.filter(a => a.status === 'pending');
+    } else if (tab === 'rejected') {
+      appointments = appointments.filter(a => a.status === 'rejected');
     }
     
     // Filter by date if provided
@@ -350,18 +363,28 @@ export class MemStorage implements IStorage {
     // Sort by date
     appointments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Enrich with patient information
-    return appointments.map(appointment => {
+    // Fetch and prepare related data for each appointment
+    return Promise.all(appointments.map(async appointment => {
       const patient = this.users.get(appointment.patientId);
+      const hospital = await this.getHospital(appointment.hospitalId);
       
       return {
         ...appointment,
         patient: patient ? {
+          id: patient.id,
           firstName: patient.firstName,
-          lastName: patient.lastName
+          lastName: patient.lastName,
+          dateOfBirth: patient.dateOfBirth,
+          phone: patient.phone
+        } : undefined,
+        hospital: hospital ? {
+          id: hospital.id,
+          name: hospital.name,
+          type: hospital.type,
+          municipality: hospital.municipality
         } : undefined
       };
-    });
+    }));
   }
   
   async getDoctorMedicalRecords(doctorId: number, tab: string, page: number, search: string): Promise<any[]> {
@@ -487,7 +510,7 @@ export class MemStorage implements IStorage {
       .filter(appointment => 
         appointment.patientId === patientId && 
         new Date(appointment.date).getTime() >= new Date().getTime() &&
-        appointment.status === 'scheduled'
+        (appointment.status === 'pending' || appointment.status === 'approved')
       ).length;
     
     const activeMedications = Array.from(this.prescriptions.values())
@@ -530,23 +553,31 @@ export class MemStorage implements IStorage {
       .filter(appointment => 
         appointment.patientId === patientId && 
         new Date(appointment.date).getTime() >= new Date().getTime() &&
-        appointment.status === 'scheduled'
+        (appointment.status === 'pending' || appointment.status === 'approved')
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Enrich with doctor information
-    return upcomingAppointments.map(appointment => {
+    // Fetch and prepare related data for each appointment
+    return Promise.all(upcomingAppointments.map(async appointment => {
       const doctor = this.users.get(appointment.doctorId);
+      const hospital = await this.getHospital(appointment.hospitalId);
       
       return {
         ...appointment,
         doctor: doctor ? {
           id: doctor.id,
           firstName: doctor.firstName,
-          lastName: doctor.lastName
+          lastName: doctor.lastName,
+          specialty: doctor.specialty
+        } : undefined,
+        hospital: hospital ? {
+          id: hospital.id,
+          name: hospital.name,
+          type: hospital.type,
+          municipality: hospital.municipality
         } : undefined
       };
-    });
+    }));
   }
   
   async getAvailableDoctors(): Promise<any[]> {
