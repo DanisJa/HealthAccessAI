@@ -261,8 +261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const { tab = "upcoming", date } = req.query;
-      const appointments = await storage.getDoctorAppointments(user.id, tab as string, date as string);
+      const { tab = "upcoming", date, hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const appointments = await storage.getDoctorAppointments(
+        user.id, 
+        tab as string, 
+        date as string, 
+        hospitalIdParam
+      );
       res.status(200).json(appointments);
     } catch (error) {
       res.status(500).json({ message: "Failed to get appointments" });
@@ -464,8 +471,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const { tab = "upcoming", date } = req.query;
-      const appointments = await storage.getPatientAppointments(user.id, tab as string, date as string);
+      const { tab = "upcoming", date, hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const appointments = await storage.getPatientAppointments(
+        user.id, 
+        tab as string, 
+        date as string,
+        hospitalIdParam
+      );
       res.status(200).json(appointments);
     } catch (error) {
       res.status(500).json({ message: "Failed to get appointments" });
