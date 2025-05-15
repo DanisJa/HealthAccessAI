@@ -1,0 +1,116 @@
+# 🛠️ Replit Prompt: Role-Based Healthcare Web App with Supabase + AI Chatbot
+
+## 💡 Project Title  
+**IoT Health Dashboard with Role-Based Access and AI Assistant**
+
+---
+
+## 🎯 Project Description  
+Create a secure, modern healthcare web app powered by **Supabase** as the backend and **OpenAI (or other LLM)** for AI-powered chatbot assistance.  
+The system supports two user roles – **Patients** and **Doctors** – each with tailored access to features like medical records, prescriptions, health tracking, and communication.  
+An integrated **AI chatbot** supports patients and doctors with health-related queries and app guidance.
+
+---
+
+## 👥 User Roles
+- **Patient**
+- **Doctor**
+
+Use Supabase **Row-Level Security (RLS)** and **role-based policies** to control access to specific tables and API routes.
+
+---
+
+## 🔐 Authentication & Authorization
+- Supabase Auth with email/password
+- On sign-up, users are assigned role: `patient` or `doctor`
+- RLS policies to restrict data access by role and user ID
+- Optional: Admin dashboard for role promotion
+
+---
+
+## 🧠 Core Features by Role
+
+### 👨‍⚕️ Doctor Features
+- ✅ View all patient medical history  
+- 📝 Write and save medical reports (`medical_reports` table)  
+- 🧾 Create/edit medical orders (`medical_orders` table)  
+- 📊 Insert and update patient parameters:  
+  - Weight, height, blood pressure, sugar level  
+- 🖊️ Write prescriptions linked to patients  
+- 🔎 View all medications for any patient  
+- 🔁 Securely share patient info with other doctors  
+- 🤖 Chatbot assistant for diagnosis suggestions & symptom checks  
+
+### 🧑‍🦰 Patient Features
+- 📄 View own medical history, orders, and prescriptions  
+- 💊 Track current and past medications with dosage  
+- 📅 Make doctor appointments (insert to `appointments` table)  
+- ⏰ Set reminders (medication, vaccinations, etc.)  
+- 📈 Input personal health data (stored in `parameters` table)  
+- 🤖 Chatbot assistant for medication queries, appointment help, and FAQ  
+
+---
+
+## 💬 AI Chatbot Integration
+- Use OpenAI (e.g., GPT-4 Turbo via API) or another LLM provider
+- Route user prompts to `/api/chatbot` endpoint
+- Example chatbot use cases:
+  - “What does my blood pressure value mean?”
+  - “Help me schedule a follow-up.”
+  - “Summarize patient report X.”
+- Separate chatbot persona for:
+  - **Patient Guidance**
+  - **Doctor Assistant**
+
+---
+
+## 🖼️ Frontend Stack (React or Next.js suggested)
+- Supabase client SDK for auth and data access
+- Role-based dashboard:
+  - `PatientDashboard.tsx`
+  - `DoctorDashboard.tsx`
+- Components:
+  - AppointmentCalendar
+  - MedicationTimeline
+  - ParameterInputForm
+  - ChatbotInterface (floating or side widget)
+- Protected routes with role guards
+- Real-time updates using Supabase subscriptions (if needed)
+
+---
+
+## 🗃️ Backend (Supabase + Edge Functions)
+**Tables:**
+- `users` (with role metadata)
+- `medical_reports`
+- `medical_orders`
+- `prescriptions`
+- `parameters`
+- `appointments`
+- `reminders`
+
+**Other Setup:**
+- Enable Supabase RLS for all sensitive tables
+- Use Supabase **Edge Functions** for:
+  - Chatbot API integration
+  - Secure data handling and validation
+
+---
+
+## ⚙️ Stretch Features (optional)
+- Upload lab reports/images via Supabase Storage
+- Simulate IoT sensor data streaming (e.g., real-time vitals)
+- Analytics Dashboard for trends in patient parameters
+- Multi-language support (e.g., English & Bosnian)
+- Admin audit log for doctor actions
+
+---
+
+## ✅ Deliverables Checklist
+- [ ] Supabase Auth with RLS
+- [ ] Functional dashboards per user role
+- [ ] AI chatbot integration
+- [ ] Health data input and real-time updates
+- [ ] Secure role-based route protection
+- [ ] Elegant and responsive UI
+
