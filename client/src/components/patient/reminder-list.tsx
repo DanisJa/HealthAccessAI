@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime } from "@/lib/utils";
 import { CheckCircle, Clock } from "lucide-react";
+import { useHospital } from "@/hooks/use-hospital";
 
 interface Reminder {
   id: number;
@@ -21,6 +22,7 @@ interface ReminderListProps {
 
 export function ReminderList({ reminders }: ReminderListProps) {
   const [_, navigate] = useLocation();
+  const { selectedHospital } = useHospital();
 
   const getUrgencyBadge = (dueDate: string, urgency?: string) => {
     const today = new Date();

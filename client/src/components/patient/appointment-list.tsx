@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime } from "@/lib/utils";
+import { useHospital } from "@/hooks/use-hospital";
 
 interface Doctor {
   id: number;
@@ -27,6 +28,7 @@ interface AppointmentListProps {
 
 export function AppointmentList({ appointments }: AppointmentListProps) {
   const [_, navigate] = useLocation();
+  const { selectedHospital } = useHospital();
 
   const getStatusBadge = (status: string, daysUntil?: number) => {
     if (daysUntil !== undefined) {
@@ -61,7 +63,14 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Upcoming Appointments</CardTitle>
+          <div>
+            <CardTitle>Upcoming Appointments</CardTitle>
+            {selectedHospital && (
+              <p className="text-xs text-muted-foreground">
+                Filtered by {selectedHospital.name}
+              </p>
+            )}
+          </div>
           <Button size="sm" onClick={() => navigate("/patient/appointments")}>
             <span className="material-icons text-sm mr-1">add</span> New
           </Button>

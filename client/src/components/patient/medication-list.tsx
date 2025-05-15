@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { CalendarClock } from "lucide-react";
+import { useHospital } from "@/hooks/use-hospital";
 
 interface Medication {
   id: number;
@@ -20,12 +21,21 @@ interface MedicationListProps {
 }
 
 export function MedicationList({ medications }: MedicationListProps) {
+  const { selectedHospital } = useHospital();
+  
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Current Medications</CardTitle>
-          <Button variant="link" size="sm" href="/patient/medications">
+          <div>
+            <CardTitle>Current Medications</CardTitle>
+            {selectedHospital && (
+              <p className="text-xs text-muted-foreground">
+                Filtered by {selectedHospital.name}
+              </p>
+            )}
+          </div>
+          <Button variant="link" size="sm" onClick={() => window.location.href = "/patient/medications"}>
             View history
           </Button>
         </div>
