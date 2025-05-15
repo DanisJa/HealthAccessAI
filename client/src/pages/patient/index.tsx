@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { PageContainer } from "@/components/layout/page-container";
+import { useHospital } from "@/hooks/use-hospital";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { HealthTracking } from "@/components/patient/health-tracking";
@@ -8,29 +9,55 @@ import { MedicationList } from "@/components/patient/medication-list";
 import { AppointmentList } from "@/components/patient/appointment-list";
 import { ReminderList } from "@/components/patient/reminder-list";
 import { ChatWidget } from "@/components/chat/chat-widget";
-import { Calendar, PillIcon, Bell, FileText } from "lucide-react";
+import { Calendar, PillIcon, Bell, FileText, Building2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function PatientDashboard() {
   const { user } = useAuth();
+  const { selectedHospital } = useHospital();
 
   const { data: stats, isLoading: isStatsLoading } = useQuery({
-    queryKey: ['/api/patient/stats'],
+    queryKey: ['/api/patient/stats', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/patient/stats?hospitalId=${selectedHospital.id}`
+        : '/api/patient/stats';
+      return apiRequest(url);
+    },
     enabled: !!user,
   });
 
   const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
-    queryKey: ['/api/patient/appointments/upcoming'],
+    queryKey: ['/api/patient/appointments/upcoming', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/patient/appointments/upcoming?hospitalId=${selectedHospital.id}`
+        : '/api/patient/appointments/upcoming';
+      return apiRequest(url);
+    },
     enabled: !!user,
   });
 
   const { data: medications, isLoading: isMedicationsLoading } = useQuery({
-    queryKey: ['/api/patient/medications'],
+    queryKey: ['/api/patient/medications', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/patient/medications?hospitalId=${selectedHospital.id}`
+        : '/api/patient/medications';
+      return apiRequest(url);
+    },
     enabled: !!user,
   });
 
   const { data: reminders, isLoading: isRemindersLoading } = useQuery({
-    queryKey: ['/api/patient/reminders'],
+    queryKey: ['/api/patient/reminders', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/patient/reminders?hospitalId=${selectedHospital.id}`
+        : '/api/patient/reminders';
+      return apiRequest(url);
+    },
     enabled: !!user,
   });
 
@@ -38,16 +65,16 @@ export default function PatientDashboard() {
 
   if (isLoading) {
     return (
-      <PageContainer>
+      <DashboardLayout>
         <div className="flex justify-center items-center h-[50vh]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </PageContainer>
+      </DashboardLayout>
     );
   }
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       {/* Welcome Section */}
       <WelcomeCard
         role="patient"
@@ -58,6 +85,16 @@ export default function PatientDashboard() {
         }}
         imgUrl="https://images.unsplash.com/photo-1505751172876-fa1923c5c528?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=400&q=80"
       />
+      
+      {/* Hospital Info */}
+      {selectedHospital && (
+        <div className="flex items-center gap-2 mb-4 p-2 bg-muted/20 rounded-md">
+          <Building2 className="h-5 w-5 text-primary" />
+          <span className="text-sm font-medium">
+            Currently viewing: {selectedHospital.name} ({selectedHospital.type}) - {selectedHospital.municipality}
+          </span>
+        </div>
+      )}
 
       {/* Patient Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -101,6 +138,6 @@ export default function PatientDashboard() {
 
       {/* Chat Widget */}
       <ChatWidget role="patient" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }

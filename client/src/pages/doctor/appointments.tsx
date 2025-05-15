@@ -31,7 +31,8 @@ import {
   Calendar as CalendarIcon, 
   CheckCircle2, 
   XCircle, 
-  Clock3 
+  Clock3,
+  Building2
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
@@ -50,12 +51,34 @@ export default function DoctorAppointments() {
   const [appointmentTime, setAppointmentTime] = useState("");
   const [appointmentDuration, setAppointmentDuration] = useState("30");
 
+  const { selectedHospital } = useHospital();
+  
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['/api/doctor/appointments', tab, date ? format(date, 'yyyy-MM-dd') : null],
+    queryKey: ['/api/doctor/appointments', tab, date ? format(date, 'yyyy-MM-dd') : null, selectedHospital?.id],
+    queryFn: async () => {
+      const formattedDate = date ? format(date, 'yyyy-MM-dd') : null;
+      let url = `/api/doctor/appointments?tab=${tab}`;
+      
+      if (formattedDate) {
+        url += `&date=${formattedDate}`;
+      }
+      
+      if (selectedHospital) {
+        url += `&hospitalId=${selectedHospital.id}`;
+      }
+      
+      return apiRequest(url);
+    },
   });
 
   const { data: patients } = useQuery({
-    queryKey: ['/api/doctor/patients/all'],
+    queryKey: ['/api/doctor/patients/all', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/doctor/patients/all?hospitalId=${selectedHospital.id}`
+        : '/api/doctor/patients/all';
+      return apiRequest(url);
+    },
   });
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -93,7 +116,7 @@ export default function DoctorAppointments() {
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold font-heading">Appointments</h1>
@@ -101,6 +124,15 @@ export default function DoctorAppointments() {
             <CalendarPlus className="mr-2 h-4 w-4" /> New Appointment
           </Button>
         </div>
+        
+        {selectedHospital && (
+          <div className="flex items-center gap-2 mb-4 p-2 bg-muted/20 rounded-md">
+            <Building2 className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium">
+              Currently viewing: {selectedHospital.name} ({selectedHospital.type}) - {selectedHospital.municipality}
+            </span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="md:col-span-2">
@@ -325,6 +357,6 @@ export default function DoctorAppointments() {
       </Dialog>
 
       <ChatWidget role="doctor" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }
