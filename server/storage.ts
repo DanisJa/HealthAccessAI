@@ -9,6 +9,7 @@ import {
   hospitals,
   hospitalDoctors,
   hospitalPatients,
+  messages,
   type User, 
   type InsertUser, 
   type MedicalReport, 
@@ -28,7 +29,9 @@ import {
   type HospitalDoctor,
   type InsertHospitalDoctor,
   type HospitalPatient,
-  type InsertHospitalPatient
+  type InsertHospitalPatient,
+  type Message,
+  type InsertMessage
 } from "@shared/schema";
 
 // Define the extended storage interface with all needed CRUD methods
@@ -1267,6 +1270,143 @@ export class MemStorage implements IStorage {
     );
     
     return hospitals.filter((hospital): hospital is Hospital => hospital !== undefined);
+  }
+  
+  async getHospitalDepartments(hospitalId: number): Promise<string[]> {
+    const hospital = await this.getHospital(hospitalId);
+    return hospital?.departments || [];
+  }
+  
+  // Message methods
+  async getUserMessages(userId: number, tab: string, page: number, search: string): Promise<any[]> {
+    // Get all messages where the user is the recipient
+    const messages = [...this.messages.values()].filter(message => 
+      message.recipientId === userId && 
+      (tab === 'all' || message.status === tab) &&
+      (!search || 
+        message.subject.toLowerCase().includes(search.toLowerCase()) || 
+        message.content.toLowerCase().includes(search.toLowerCase())
+      )
+    );
+    
+    // Sort by date, newest first
+    messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    // Get sender details for each message
+    const messagesWithSenders = await Promise.all(messages.map(async (message) => {
+      const sender = await this.getUser(message.senderId);
+      return {
+        ...message,
+        sender: {
+          id: sender?.id,
+          name: `${sender?.firstName} ${sender?.lastName}`,
+          role: sender?.role
+        }
+      };
+    }));
+    
+    // Paginate results
+    const pageSize = 10;
+    const startIndex = (page - 1) * pageSize;
+    return messagesWithSenders.slice(startIndex, startIndex + pageSize);
+  }
+  
+  async getUserSentMessages(userId: number, page: number, search: string): Promise<any[]> {
+    // Get all messages where the user is the sender
+    const messages = [...this.messages.values()].filter(message => 
+      message.senderId === userId &&
+      (!search || 
+        message.subject.toLowerCase().includes(search.toLowerCase()) || 
+        message.content.toLowerCase().includes(search.toLowerCase())
+      )
+    );
+    
+    // Sort by date, newest first
+    messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    // Get recipient details for each message
+    const messagesWithRecipients = await Promise.all(messages.map(async (message) => {
+      const recipient = await this.getUser(message.recipientId);
+      return {
+        ...message,
+        recipient: {
+          id: recipient?.id,
+          name: `${recipient?.firstName} ${recipient?.lastName}`,
+          role: recipient?.role
+        }
+      };
+    }));
+    
+    // Paginate results
+    const pageSize = 10;
+    const startIndex = (page - 1) * pageSize;
+    return messagesWithRecipients.slice(startIndex, startIndex + pageSize);
+  }
+  
+  async getMessageThread(parentMessageId: number): Promise<any[]> {
+    // Get the parent message
+    const parentMessage = this.messages.get(parentMessageId);
+    if (!parentMessage) {
+      return [];
+    }
+    
+    // Get all replies to this message
+    const replies = [...this.messages.values()].filter(message => message.parentId === parentMessageId);
+    
+    // Sort by date, oldest first
+    const thread = [parentMessage, ...replies].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    
+    // Get user details for each message
+    return Promise.all(thread.map(async (message) => {
+      const sender = await this.getUser(message.senderId);
+      const recipient = await this.getUser(message.recipientId);
+      return {
+        ...message,
+        sender: {
+          id: sender?.id,
+          name: `${sender?.firstName} ${sender?.lastName}`,
+          role: sender?.role
+        },
+        recipient: {
+          id: recipient?.id,
+          name: `${recipient?.firstName} ${recipient?.lastName}`,
+          role: recipient?.role
+        }
+      };
+    }));
+  }
+  
+  async getMessage(messageId: number): Promise<Message | undefined> {
+    return this.messages.get(messageId);
+  }
+  
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const id = this.currentMessageId++;
+    const createdAt = new Date();
+    
+    const message: Message = {
+      ...insertMessage,
+      id,
+      createdAt,
+    };
+    
+    this.messages.set(id, message);
+    return message;
+  }
+  
+  async updateMessageStatus(messageId: number, status: string): Promise<Message> {
+    const message = this.messages.get(messageId);
+    if (!message) {
+      throw new Error(`Message with ID ${messageId} not found`);
+    }
+    
+    const updatedMessage: Message = {
+      ...message,
+      status: status as "unread" | "read" | "archived"
+    };
+    
+    this.messages.set(messageId, updatedMessage);
+    return updatedMessage;
   }
   
   // Appointment methods
