@@ -106,6 +106,23 @@ export const reminders = pgTable("reminders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Define message status enum
+export const messageStatusEnum = pgEnum('message_status', ['unread', 'read', 'archived']);
+
+// Messages table
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  receiverId: integer("receiver_id").notNull().references(() => users.id),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  status: messageStatusEnum("status").notNull().default('unread'),
+  hospitalId: integer("hospital_id").references(() => hospitals.id), // Optional reference to hospital
+  attachmentUrl: text("attachment_url"), // URL to attachment if any
+  parentMessageId: integer("parent_message_id").references(() => messages.id), // For threading conversations
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Hospitals table
 export const hospitals = pgTable("hospitals", {
   id: serial("id").primaryKey(),
@@ -118,7 +135,7 @@ export const hospitals = pgTable("hospitals", {
   email: text("email"),
   website: text("website"),
   capacity: integer("capacity"), // Number of beds
-  departments: text("departments").array(), // List of departments
+  departments: text("departments").array().default(['Emergency', 'Surgery', 'Cardiology', 'Neurology', 'Pediatrics', 'Obstetrics', 'Gynecology', 'Orthopedics', 'Radiology', 'Laboratory', 'Pharmacy']), // List of departments
   services: text("services").array(), // List of services provided
   adminId: integer("admin_id").references(() => users.id), // Reference to hospital admin user (role='hospital')
   createdAt: timestamp("created_at").defaultNow(),
@@ -196,6 +213,11 @@ export const insertHospitalPatientSchema = createInsertSchema(hospitalPatients).
   createdAt: true,
 });
 
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -226,6 +248,9 @@ export type InsertHospitalDoctor = z.infer<typeof insertHospitalDoctorSchema>;
 
 export type HospitalPatient = typeof hospitalPatients.$inferSelect;
 export type InsertHospitalPatient = z.infer<typeof insertHospitalPatientSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 // Auth schemas
 export const loginSchema = z.object({

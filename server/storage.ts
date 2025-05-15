@@ -51,6 +51,7 @@ export interface IStorage {
   removePatientFromHospital(hospitalId: number, patientId: number): Promise<void>;
   getDoctorHospitals(doctorId: number): Promise<Hospital[]>;
   getPatientHospitals(patientId: number): Promise<Hospital[]>;
+  getHospitalDepartments(hospitalId: number): Promise<string[]>; // Returns list of departments for a hospital
   
   // Doctor methods
   getDoctorStats(doctorId: number): Promise<any>;
@@ -90,6 +91,14 @@ export interface IStorage {
   getPatientFilteredReminders(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
   createReminder(reminder: InsertReminder): Promise<Reminder>;
   completeReminder(reminderId: number, userId: number): Promise<Reminder>;
+  
+  // Message methods
+  getUserMessages(userId: number, tab: string, page: number, search: string): Promise<any[]>; // Get inbox messages for a user
+  getUserSentMessages(userId: number, page: number, search: string): Promise<any[]>; // Get sent messages
+  getMessageThread(parentMessageId: number): Promise<any[]>; // Get message thread
+  getMessage(messageId: number): Promise<Message | undefined>; // Get a specific message
+  createMessage(message: InsertMessage): Promise<Message>; // Create a new message
+  updateMessageStatus(messageId: number, status: string): Promise<Message>; // Update message status (read, archived)
 }
 
 export class MemStorage implements IStorage {
@@ -103,6 +112,7 @@ export class MemStorage implements IStorage {
   private hospitals: Map<number, Hospital>;
   private hospitalDoctors: Map<string, HospitalDoctor>; // Key is hospitalId:doctorId
   private hospitalPatients: Map<string, HospitalPatient>; // Key is hospitalId:patientId
+  private messages: Map<number, Message>; // Messages between users
   
   private currentUserId: number;
   private currentMedicalReportId: number;
@@ -112,6 +122,7 @@ export class MemStorage implements IStorage {
   private currentAppointmentId: number;
   private currentReminderId: number;
   private currentHospitalId: number;
+  private currentMessageId: number;
 
   constructor() {
     this.users = new Map();
@@ -124,6 +135,7 @@ export class MemStorage implements IStorage {
     this.hospitals = new Map();
     this.hospitalDoctors = new Map();
     this.hospitalPatients = new Map();
+    this.messages = new Map();
     
     this.currentUserId = 1;
     this.currentMedicalReportId = 1;
@@ -133,6 +145,7 @@ export class MemStorage implements IStorage {
     this.currentAppointmentId = 1;
     this.currentReminderId = 1;
     this.currentHospitalId = 1;
+    this.currentMessageId = 1;
   }
 
   // User methods
