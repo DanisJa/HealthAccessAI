@@ -126,6 +126,7 @@ export default function Register() {
                       <SelectContent>
                         <SelectItem value="patient">Patient</SelectItem>
                         <SelectItem value="doctor">Doctor</SelectItem>
+                        <SelectItem value="hospital">Hospital Administrator</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

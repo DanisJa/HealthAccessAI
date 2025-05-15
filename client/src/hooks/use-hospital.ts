@@ -1,96 +1,96 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { useAuth } from '@/hooks/use-auth';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-interface Hospital {
-  id: number;
-  name: string;
-  type: 'public' | 'private';
-  municipality: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  departments?: string[];
-  services?: string[];
-}
+type HospitalStore = {
+  selectedHospital: number | null;
+  setSelectedHospital: (id: number | null) => void;
+};
 
-interface HospitalState {
-  hospitals: Hospital[];
-  selectedHospital: Hospital | null;
-  loadingHospitals: boolean;
-  error: string | null;
-  setHospitals: (hospitals: Hospital[]) => void;
-  setSelectedHospital: (hospital: Hospital | null) => void;
-  setLoadingHospitals: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-}
+const useHospitalStore = create<HospitalStore>((set) => ({
+  selectedHospital: null,
+  setSelectedHospital: (id) => set({ selectedHospital: id }),
+}));
 
-export const useHospitalStore = create<HospitalState>()(
-  persist(
-    (set) => ({
-      hospitals: [],
-      selectedHospital: null,
-      loadingHospitals: false,
-      error: null,
-      setHospitals: (hospitals) => set({ hospitals }),
-      setSelectedHospital: (hospital) => set({ selectedHospital: hospital }),
-      setLoadingHospitals: (loading) => set({ loadingHospitals: loading }),
-      setError: (error) => set({ error }),
-    }),
-    {
-      name: 'hospital-storage',
-    }
-  )
-);
-
-export const useHospital = () => {
-  const {
-    hospitals, 
-    selectedHospital, 
-    loadingHospitals, 
-    error,
-    setHospitals,
-    setSelectedHospital,
-    setLoadingHospitals,
-    setError
-  } = useHospitalStore();
-
-  const fetchHospitals = async (userId: number, userRole: 'doctor' | 'patient') => {
-    setLoadingHospitals(true);
-    setError(null);
-
-    try {
-      const endpoint = userRole === 'doctor'
-        ? `/api/doctor/hospitals`
-        : `/api/patient/hospitals`;
-        
-      const response = await fetch(endpoint);
+export function useHospital() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { selectedHospital, setSelectedHospital } = useHospitalStore();
+  
+  // Fetch user's hospitals 
+  const userRole = user?.role || '';
+  const userId = user?.id || 0;
+  
+  const hospitalQuery = useQuery({
+    queryKey: ['hospitals', userRole, userId],
+    queryFn: async () => {
+      let endpoint = '';
       
+      if (userRole === 'hospital') {
+        endpoint = `/api/hospital?id=${userId}`;
+      } else if (userRole === 'doctor') {
+        endpoint = `/api/doctor/hospitals`;
+      } else if (userRole === 'patient') {
+        endpoint = `/api/patient/hospitals`;
+      }
+      
+      if (!endpoint) return [];
+      
+      const response = await fetch(endpoint);
       if (!response.ok) {
         throw new Error('Failed to fetch hospitals');
       }
-      
-      const data = await response.json();
-      setHospitals(data);
-      
-      // Set the first hospital as selected by default if none is selected
-      if (!selectedHospital && data.length > 0) {
-        setSelectedHospital(data[0]);
-      }
-    } catch (err) {
-      console.error('Error fetching hospitals:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoadingHospitals(false);
+      return response.json();
+    },
+    enabled: !!user,
+  });
+  
+  // Set the first hospital as selected if none is selected yet
+  useEffect(() => {
+    if (
+      hospitalQuery.isSuccess &&
+      Array.isArray(hospitalQuery.data) &&
+      hospitalQuery.data.length > 0 &&
+      !selectedHospital
+    ) {
+      setSelectedHospital(hospitalQuery.data[0].id);
     }
-  };
-
+  }, [hospitalQuery.data, hospitalQuery.isSuccess, selectedHospital, setSelectedHospital]);
+  
+  // When user changes selected hospital, invalidate queries that depend on hospital context
+  useEffect(() => {
+    if (selectedHospital) {
+      // Invalidate queries that depend on hospital context
+      queryClient.invalidateQueries({
+        queryKey: ['appointments'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['patients'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['doctors'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['medicalRecords'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['prescriptions'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['parameters'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['reminders'],
+      });
+    }
+  }, [selectedHospital, queryClient]);
+  
   return {
-    hospitals,
     selectedHospital,
-    loadingHospitals,
-    error,
-    fetchHospitals,
     setSelectedHospital,
+    hospitals: hospitalQuery.data || [],
+    isLoading: hospitalQuery.isLoading,
+    isError: hospitalQuery.isError,
   };
-};
+}

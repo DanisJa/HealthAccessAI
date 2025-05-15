@@ -1,76 +1,81 @@
-import React, { useEffect } from 'react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import React from 'react';
 import { useHospital } from '@/hooks/use-hospital';
-import { useAuth } from '@/hooks/use-auth';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building, Check, ChevronsUpDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
-interface HospitalSelectorProps {
-  onChange?: (hospitalId: number) => void;
-  className?: string;
-}
-
-export function HospitalSelector({ onChange, className = '' }: HospitalSelectorProps) {
-  const { hospitals, selectedHospital, loadingHospitals, setSelectedHospital, fetchHospitals } = useHospital();
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (user?.id && user?.role) {
-      fetchHospitals(user.id, user.role as 'doctor' | 'patient');
-    }
-  }, [user, fetchHospitals]);
-
-  const handleHospitalChange = (value: string) => {
-    const hospitalId = parseInt(value, 10);
-    const hospital = hospitals.find(h => h.id === hospitalId) || null;
-    
-    if (hospital) {
-      setSelectedHospital(hospital);
-      onChange?.(hospitalId);
-    }
-  };
-
-  if (loadingHospitals) {
+export function HospitalSelector() {
+  const [open, setOpen] = React.useState(false);
+  const { hospitals, selectedHospital, setSelectedHospital, isLoading } = useHospital();
+  
+  const selectedHospitalData = hospitals.find(
+    (hospital: any) => hospital.id === selectedHospital
+  );
+  
+  if (isLoading) {
     return (
-      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading hospitals...</span>
-      </div>
+      <Button variant="outline" size="sm" className="w-[220px] h-9 justify-start" disabled>
+        <Building className="mr-2 h-4 w-4" />
+        <span className="text-xs">Loading hospitals...</span>
+      </Button>
     );
   }
-
-  if (!hospitals || hospitals.length === 0) {
+  
+  if (hospitals.length === 0) {
     return (
-      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-        <Building2 className="h-4 w-4" />
-        <span>No hospitals available</span>
-      </div>
+      <Button variant="outline" size="sm" className="w-[220px] h-9 justify-start" disabled>
+        <Building className="mr-2 h-4 w-4" />
+        <span className="text-xs">No hospitals available</span>
+      </Button>
     );
   }
-
+  
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
-      <Building2 className="h-4 w-4 text-muted-foreground" />
-      <Select
-        value={selectedHospital?.id.toString()}
-        onValueChange={handleHospitalChange}
-      >
-        <SelectTrigger className="w-[220px]">
-          <SelectValue placeholder="Select a hospital" />
-        </SelectTrigger>
-        <SelectContent>
-          {hospitals.map((hospital) => (
-            <SelectItem key={hospital.id} value={hospital.id.toString()}>
-              {hospital.name} ({hospital.type})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[220px] h-9 justify-between"
+        >
+          <div className="flex items-center">
+            <Building className="mr-2 h-4 w-4" />
+            <span className="text-xs truncate">
+              {selectedHospitalData ? selectedHospitalData.name : "Select hospital"}
+            </span>
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[220px] p-0">
+        <Command>
+          <CommandInput placeholder="Search hospital..." className="h-9" />
+          <CommandEmpty>No hospital found.</CommandEmpty>
+          <CommandGroup>
+            {hospitals.map((hospital: any) => (
+              <CommandItem
+                key={hospital.id}
+                value={hospital.name}
+                onSelect={() => {
+                  setSelectedHospital(hospital.id);
+                  setOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    selectedHospital === hospital.id ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <span className="text-xs">{hospital.name}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

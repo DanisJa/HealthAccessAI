@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Define user roles enum
-export const roleEnum = pgEnum('role', ['patient', 'doctor']);
+export const roleEnum = pgEnum('role', ['patient', 'doctor', 'hospital']);
 
 // Define hospital types enum
 export const hospitalTypeEnum = pgEnum('hospital_type', ['public', 'private']);
@@ -120,6 +120,7 @@ export const hospitals = pgTable("hospitals", {
   capacity: integer("capacity"), // Number of beds
   departments: text("departments").array(), // List of departments
   services: text("services").array(), // List of services provided
+  adminId: integer("admin_id").references(() => users.id), // Reference to hospital admin user (role='hospital')
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -127,7 +128,11 @@ export const hospitals = pgTable("hospitals", {
 export const hospitalDoctors = pgTable("hospital_doctors", {
   hospitalId: integer("hospital_id").notNull().references(() => hospitals.id),
   doctorId: integer("doctor_id").notNull().references(() => users.id),
-  assignedBy: integer("assigned_by").references(() => users.id),
+  assignedBy: integer("assigned_by").notNull().references(() => users.id), // User (hospital admin) who assigned this doctor
+  status: text("status").notNull().default('active'), // Can be 'active', 'pending', 'inactive'
+  department: text("department"), // Department the doctor works in at this hospital
+  specialtyAtHospital: text("specialty_at_hospital"), // Can be different from the doctor's general specialty
+  schedule: text("schedule"), // Doctor's schedule at this hospital
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -135,6 +140,10 @@ export const hospitalDoctors = pgTable("hospital_doctors", {
 export const hospitalPatients = pgTable("hospital_patients", {
   hospitalId: integer("hospital_id").notNull().references(() => hospitals.id),
   patientId: integer("patient_id").notNull().references(() => users.id),
+  registeredBy: integer("registered_by").references(() => users.id), // User who registered this patient at this hospital
+  primaryDoctor: integer("primary_doctor").references(() => users.id), // Primary doctor for this patient at this hospital
+  status: text("status").notNull().default('active'), // Can be 'active', 'inactive', 'archived'
+  notes: text("notes"), // Special notes for this patient at this hospital
   createdAt: timestamp("created_at").defaultNow(),
 });
 
