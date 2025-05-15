@@ -64,6 +64,7 @@ export const prescriptions = pgTable("prescriptions", {
 export const parameters = pgTable("parameters", {
   id: serial("id").primaryKey(),
   patientId: integer("patient_id").notNull().references(() => users.id),
+  hospitalId: integer("hospital_id").references(() => hospitals.id), // Optional reference to hospital
   type: text("type").notNull(), // e.g. 'blood_pressure', 'weight', 'heart_rate', etc.
   value: text("value").notNull(), // Store as text to accommodate various formats
   unit: text("unit").notNull(),

@@ -634,7 +634,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const parameters = await storage.getPatientRecentParameters(user.id);
+      const { hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const parameters = await storage.getPatientRecentParameters(user.id, hospitalIdParam);
       res.status(200).json(parameters);
     } catch (error) {
       res.status(500).json({ message: "Failed to get recent health parameters" });
@@ -654,9 +657,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const data = insertParameterSchema.parse(req.body);
+      
+      // Extract hospitalId if provided (for hospital-specific parameters)
+      const { hospitalId, ...paramData } = data;
+      
       const parameter = await storage.createParameter({
-        ...data,
-        patientId: user.id
+        ...paramData,
+        patientId: user.id,
+        // Include hospitalId if it was provided
+        ...(hospitalId ? { hospitalId } : {})
       });
       
       res.status(201).json(parameter);

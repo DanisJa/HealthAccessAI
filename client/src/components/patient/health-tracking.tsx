@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useHospital } from "@/hooks/use-hospital";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ParameterType = "blood_pressure" | "weight" | "blood_glucose";
@@ -27,13 +28,24 @@ export function HealthTracking() {
   const [parameterUnit, setParameterUnit] = useState("mmHg");
 
   const { toast } = useToast();
+  const { selectedHospital } = useHospital();
 
   const { data: parameters, isLoading } = useQuery({
-    queryKey: ['/api/patient/parameters/recent'],
+    queryKey: ['/api/patient/parameters/recent', selectedHospital?.id],
+    queryFn: async () => {
+      const url = selectedHospital 
+        ? `/api/patient/parameters/recent?hospitalId=${selectedHospital.id}`
+        : '/api/patient/parameters/recent';
+      return apiRequest(url);
+    },
   });
 
   const addParameterMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Add hospital ID to parameters if a hospital is selected
+      if (selectedHospital) {
+        data.hospitalId = selectedHospital.id;
+      }
       const res = await apiRequest('POST', '/api/patient/parameters', data);
       return res.json();
     },
@@ -44,7 +56,7 @@ export function HealthTracking() {
       });
       setIsDialogOpen(false);
       setParameterValue("");
-      queryClient.invalidateQueries({ queryKey: ['/api/patient/parameters/recent'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/patient/parameters/recent', selectedHospital?.id] });
     },
     onError: (error) => {
       toast({
