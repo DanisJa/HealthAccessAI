@@ -22,6 +22,8 @@ import PatientAppointments from "@/pages/patient/appointments";
 import PatientMedications from "@/pages/patient/medications";
 import PatientReminders from "@/pages/patient/reminders";
 import HospitalDashboard from "@/pages/hospital";
+import HospitalDoctors from "@/pages/hospital/doctors";
+import HospitalPatients from "@/pages/hospital/patients";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 
@@ -98,6 +100,21 @@ function Router() {
       {/* Hospital admin routes */}
       <Route path="/hospital">
         {() => <ProtectedRoute component={HospitalDashboard} roles={['hospital']} />}
+      </Route>
+      <Route path="/hospital/doctors">
+        {() => <ProtectedRoute component={HospitalDoctors} roles={['hospital']} />}
+      </Route>
+      <Route path="/hospital/patients">
+        {() => <ProtectedRoute component={HospitalPatients} roles={['hospital']} />}
+      </Route>
+      <Route path="/hospital/appointments">
+        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
+      </Route>
+      <Route path="/hospital/departments">
+        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
+      </Route>
+      <Route path="/hospital/settings">
+        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
       </Route>
       
       {/* Fallback to 404 */}

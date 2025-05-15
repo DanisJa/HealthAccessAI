@@ -480,6 +480,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Hospital Admin Routes
+  
+  // Get doctors for a hospital
+  app.get("/api/hospital/doctors", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "hospital") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const doctors = await storage.getHospitalDoctors(user.id);
+      res.status(200).json(doctors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get hospital doctors" });
+    }
+  });
+  
+  // Get patients for a hospital
+  app.get("/api/hospital/patients", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "hospital") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const patients = await storage.getHospitalPatients(user.id);
+      res.status(200).json(patients);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get hospital patients" });
+    }
+  });
+  
   // Patient Routes
   
   // Get patient dashboard stats

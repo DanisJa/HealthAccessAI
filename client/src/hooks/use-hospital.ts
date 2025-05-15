@@ -28,7 +28,15 @@ export function useHospital() {
       let endpoint = '';
       
       if (userRole === 'hospital') {
-        endpoint = `/api/hospital?id=${userId}`;
+        // For hospital admins, they don't need to select a hospital
+        // They manage their own hospital only
+        // Return a single hospital with their own ID
+        return [{ 
+          id: userId, 
+          name: user?.firstName && user?.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : "General Hospital" 
+        }];
       } else if (userRole === 'doctor') {
         endpoint = `/api/doctor/hospitals`;
       } else if (userRole === 'patient') {
@@ -52,11 +60,16 @@ export function useHospital() {
       hospitalQuery.isSuccess &&
       Array.isArray(hospitalQuery.data) &&
       hospitalQuery.data.length > 0 &&
-      !selectedHospital
+      (!selectedHospital || userRole === 'hospital')
     ) {
-      setSelectedHospital(hospitalQuery.data[0].id);
+      // For hospital users, always select their own hospital ID (which is their user ID)
+      if (userRole === 'hospital') {
+        setSelectedHospital(userId);
+      } else {
+        setSelectedHospital(hospitalQuery.data[0].id);
+      }
     }
-  }, [hospitalQuery.data, hospitalQuery.isSuccess, selectedHospital, setSelectedHospital]);
+  }, [hospitalQuery.data, hospitalQuery.isSuccess, selectedHospital, setSelectedHospital, userRole, userId]);
   
   // When user changes selected hospital, invalidate queries that depend on hospital context
   useEffect(() => {
