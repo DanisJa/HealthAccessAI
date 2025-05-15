@@ -73,6 +73,7 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
 		);
 	}
 
+
 	if (!isAuthenticated) {
 		return null;
 	}
@@ -86,6 +87,7 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
 }
 
 function Router() {
+
 	return (
 		<Suspense
 			fallback={
@@ -218,6 +220,7 @@ function Router() {
 				<Route path="/hospital/settings">
 					{() => <ProtectedRoute component={Settings} roles={['hospital']} />}
 				</Route>
+
 
 				{/* Messaging routes - accessible by all roles */}
 				<Route path="/messages">
