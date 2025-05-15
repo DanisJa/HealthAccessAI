@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { apiRequest } from './queryClient';
 import { User, LoginInput, RegisterInput } from '@shared/schema';
+import { supabase } from '@/../utils/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
+        console.log('Checking authentication...', user);
         const response = await apiRequest('GET', '/api/auth/me');
         const userData = await response.json();
         setUser(userData);
@@ -45,14 +47,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth();
   }, []);
 
-  const login = async (data: LoginInput): Promise<User> => {
+  const login = async (userData: LoginInput): Promise<User> => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/auth/login', data);
-      const userData = await response.json();
-      console.log('User data after login:', userData);
-      setUser(userData);
-      return userData;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password: userData.password,
+      });
+      if (error) {
+        console.error('Login error:', error);
+        throw new Error(error.message);
+      }
+      const { data: user } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+
+      console.log('User data after login:', user);
+      setUser(user);
+      return user;
     } catch (error) {
       setUser(null);
       console.log('User data error:', error);
