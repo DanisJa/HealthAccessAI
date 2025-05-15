@@ -66,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: <CalendarDays className="h-5 w-5" />,
         },
         {
-          href: "/patient/messages",
+          href: "/messages",
           label: "Messages",
           icon: <MessageSquare className="h-5 w-5" />,
         },
@@ -109,7 +109,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: <Activity className="h-5 w-5" />,
         },
         {
-          href: "/doctor/messages",
+          href: "/messages",
           label: "Messages",
           icon: <MessageSquare className="h-5 w-5" />,
         },
@@ -136,18 +136,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           label: "Patients",
           icon: <Users className="h-5 w-5" />,
         },
+
         {
-          href: "/hospital/appointments",
-          label: "Appointments",
-          icon: <CalendarDays className="h-5 w-5" />,
-        },
-        {
-          href: "/hospital/departments",
-          label: "Departments",
-          icon: <Building2 className="h-5 w-5" />,
-        },
-        {
-          href: "/hospital/messages",
+          href: "/messages",
           label: "Messages",
           icon: <MessageSquare className="h-5 w-5" />,
         },
