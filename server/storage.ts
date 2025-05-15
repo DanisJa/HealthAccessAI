@@ -6,6 +6,9 @@ import {
   parameters, 
   appointments, 
   reminders,
+  hospitals,
+  hospitalDoctors,
+  hospitalPatients,
   type User, 
   type InsertUser, 
   type MedicalReport, 
@@ -19,7 +22,13 @@ import {
   type Appointment,
   type InsertAppointment,
   type Reminder,
-  type InsertReminder
+  type InsertReminder,
+  type Hospital,
+  type InsertHospital,
+  type HospitalDoctor,
+  type InsertHospitalDoctor,
+  type HospitalPatient,
+  type InsertHospitalPatient
 } from "@shared/schema";
 
 // Define the extended storage interface with all needed CRUD methods
@@ -28,6 +37,20 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Hospital methods
+  getHospital(id: number): Promise<Hospital | undefined>;
+  createHospital(hospital: InsertHospital): Promise<Hospital>;
+  getAllHospitals(): Promise<Hospital[]>;
+  getHospitalsByMunicipality(municipality: string): Promise<Hospital[]>;
+  getHospitalDoctors(hospitalId: number): Promise<any[]>; // Returns doctor details
+  addDoctorToHospital(hospitalDoctor: InsertHospitalDoctor): Promise<HospitalDoctor>;
+  removeDoctorFromHospital(hospitalId: number, doctorId: number): Promise<void>;
+  getHospitalPatients(hospitalId: number): Promise<any[]>; // Returns patient details
+  addPatientToHospital(hospitalPatient: InsertHospitalPatient): Promise<HospitalPatient>;
+  removePatientFromHospital(hospitalId: number, patientId: number): Promise<void>;
+  getDoctorHospitals(doctorId: number): Promise<Hospital[]>;
+  getPatientHospitals(patientId: number): Promise<Hospital[]>;
   
   // Doctor methods
   getDoctorStats(doctorId: number): Promise<any>;
@@ -48,12 +71,16 @@ export interface IStorage {
   // Prescription methods
   createPrescription(prescription: InsertPrescription): Promise<Prescription>;
   
+  // Appointment methods
+  getAppointment(id: number): Promise<Appointment | undefined>;
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  updateAppointmentStatus(appointmentId: number, status: string, updatedBy: number): Promise<Appointment>;
+  
   // Patient methods
   getPatientStats(patientId: number): Promise<any>;
   getPatientUpcomingAppointments(patientId: number): Promise<any[]>;
-  getAvailableDoctors(): Promise<any[]>;
+  getAvailableDoctors(hospitalId?: number): Promise<any[]>;
   getPatientAppointments(patientId: number, tab: string, date?: string): Promise<any[]>;
-  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   getPatientParameters(patientId: number): Promise<any[]>;
   getPatientRecentParameters(patientId: number): Promise<any[]>;
   createParameter(parameter: InsertParameter): Promise<Parameter>;

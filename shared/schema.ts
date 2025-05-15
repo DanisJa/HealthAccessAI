@@ -165,6 +165,19 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({
   createdAt: true,
 });
 
+export const insertHospitalSchema = createInsertSchema(hospitals).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHospitalDoctorSchema = createInsertSchema(hospitalDoctors).omit({
+  createdAt: true,
+});
+
+export const insertHospitalPatientSchema = createInsertSchema(hospitalPatients).omit({
+  createdAt: true,
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -186,6 +199,15 @@ export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 
 export type Reminder = typeof reminders.$inferSelect;
 export type InsertReminder = z.infer<typeof insertReminderSchema>;
+
+export type Hospital = typeof hospitals.$inferSelect;
+export type InsertHospital = z.infer<typeof insertHospitalSchema>;
+
+export type HospitalDoctor = typeof hospitalDoctors.$inferSelect;
+export type InsertHospitalDoctor = z.infer<typeof insertHospitalDoctorSchema>;
+
+export type HospitalPatient = typeof hospitalPatients.$inferSelect;
+export type InsertHospitalPatient = z.infer<typeof insertHospitalPatientSchema>;
 
 // Auth schemas
 export const loginSchema = z.object({
