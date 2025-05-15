@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { MessageList } from "@/components/messaging/message-list";
 import { PenSquare } from "lucide-react";
 

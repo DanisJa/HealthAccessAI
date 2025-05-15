@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
-import DashboardLayout from "@/components/layouts/dashboard-layout";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { ComposeMessage } from "@/components/messaging/compose-message";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";

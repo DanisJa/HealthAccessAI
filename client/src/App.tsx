@@ -9,6 +9,9 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import Dashboard from "@/pages/dashboard";
 import Settings from "@/pages/settings";
+import MessagesPage from "@/pages/messages";
+import ComposeMessagePage from "@/pages/messages/compose";
+import MessageThreadPage from "@/pages/messages/thread/[id]";
 import { AuthProvider } from "@/lib/auth.tsx";
 import { ChatProvider } from "@/lib/openai.tsx";
 import DoctorDashboard from "@/pages/doctor";
@@ -137,6 +140,17 @@ function Router() {
         </Route>
         <Route path="/hospital/settings">
           {() => <ProtectedRoute component={Settings} roles={['hospital']} />}
+        </Route>
+        
+        {/* Messaging routes - accessible by all roles */}
+        <Route path="/messages">
+          {() => <ProtectedRoute component={MessagesPage} />}
+        </Route>
+        <Route path="/messages/compose">
+          {() => <ProtectedRoute component={ComposeMessagePage} />}
+        </Route>
+        <Route path="/messages/thread/:id">
+          {() => <ProtectedRoute component={MessageThreadPage} />}
         </Route>
         
         {/* Fallback to 404 */}

@@ -113,10 +113,8 @@ export function ComposeMessage() {
   // Mutation to send a message
   const sendMessage = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("/api/messages", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/messages", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/sent"] });
@@ -172,7 +170,7 @@ export function ComposeMessage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {recipients.map((recipient: User) => (
+                      {recipients.map((recipient) => (
                         <SelectItem key={recipient.id} value={recipient.id.toString()}>
                           {recipient.firstName} {recipient.lastName} ({recipient.role})
                         </SelectItem>
