@@ -70,7 +70,14 @@ export function ReminderList({ reminders }: ReminderListProps) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Reminders</CardTitle>
+          <div>
+            <CardTitle>Reminders</CardTitle>
+            {selectedHospital && (
+              <p className="text-xs text-muted-foreground">
+                Filtered by {selectedHospital.name}
+              </p>
+            )}
+          </div>
           <Button size="sm" onClick={() => navigate("/patient/reminders")}>
             <span className="material-icons text-sm mr-1">add</span> New
           </Button>

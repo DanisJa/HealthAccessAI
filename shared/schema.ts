@@ -95,6 +95,7 @@ export const appointments = pgTable("appointments", {
 export const reminders = pgTable("reminders", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  hospitalId: integer("hospital_id").references(() => hospitals.id), // Optional reference to hospital
   type: text("type").notNull(), // e.g. 'medication', 'appointment', etc.
   title: text("title").notNull(),
   description: text("description"),
