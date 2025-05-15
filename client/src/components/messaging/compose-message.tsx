@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,7 +53,7 @@ type MessageFormValues = z.infer<typeof messageFormSchema>;
 
 export function ComposeMessage() {
   const { toast } = useToast();
-  const [, navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
@@ -124,7 +124,7 @@ export function ComposeMessage() {
         title: "Success",
         description: "Message sent successfully",
       });
-      navigate("/messages");
+      setLocation("/messages");
     },
     onError: () => {
       toast({
@@ -221,7 +221,7 @@ export function ComposeMessage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/messages")}
+              onClick={() => setLocation("/messages")}
             >
               Cancel
             </Button>
