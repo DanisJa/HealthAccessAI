@@ -33,24 +33,43 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, Suspense, lazy } from "react";
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
-  const { user, isLoading } = useAuth();
-  const [location, navigate] = useLocation();
+  const { user, isLoading, isAuthenticated, hasRole } = useAuth();
+  const [_, navigate] = useLocation();
   // Store the component in a ref to prevent rerendering
   const [mounted] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate("/login");
-    } else if (user && roles && !roles.includes(user.role)) {
-      navigate("/dashboard");
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        navigate("/login");
+      } else if (roles && !hasRole(roles)) {
+        // Redirect to appropriate dashboard based on role
+        if (user && typeof user === 'object' && 'role' in user) {
+          switch(user.role) {
+            case 'doctor':
+              navigate("/doctor");
+              break;
+            case 'patient':
+              navigate("/patient");
+              break;
+            case 'hospital':
+              navigate("/hospital");
+              break;
+            default:
+              navigate("/dashboard");
+          }
+        } else {
+          navigate("/dashboard");
+        }
+      }
     }
-  }, [user, isLoading, roles, navigate]);
+  }, [user, isLoading, roles, navigate, isAuthenticated, hasRole]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return null;
   }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,9 +14,28 @@ import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [_, navigate] = useLocation();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && typeof user === 'object' && 'role' in user) {
+      switch(user.role) {
+        case 'doctor':
+          navigate("/doctor");
+          break;
+        case 'patient':
+          navigate("/patient");
+          break;
+        case 'hospital':
+          navigate("/hospital");
+          break;
+        default:
+          navigate("/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -29,12 +48,30 @@ export default function Login() {
   async function onSubmit(data: LoginInput) {
     setIsLoading(true);
     try {
-      await login(data);
+      const userData = await login(data);
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
-      navigate("/dashboard");
+      
+      // Redirect based on user role
+      if (userData && typeof userData === 'object' && 'role' in userData) {
+        switch(userData.role) {
+          case 'doctor':
+            navigate("/doctor");
+            break;
+          case 'patient':
+            navigate("/patient");
+            break;
+          case 'hospital':
+            navigate("/hospital");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error(error);
       toast({
