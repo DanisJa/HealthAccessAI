@@ -100,6 +100,9 @@ export class MemStorage implements IStorage {
   private parameters: Map<number, Parameter>;
   private appointments: Map<number, Appointment>;
   private reminders: Map<number, Reminder>;
+  private hospitals: Map<number, Hospital>;
+  private hospitalDoctors: Map<string, HospitalDoctor>; // Key is hospitalId:doctorId
+  private hospitalPatients: Map<string, HospitalPatient>; // Key is hospitalId:patientId
   
   private currentUserId: number;
   private currentMedicalReportId: number;
@@ -108,6 +111,7 @@ export class MemStorage implements IStorage {
   private currentParameterId: number;
   private currentAppointmentId: number;
   private currentReminderId: number;
+  private currentHospitalId: number;
 
   constructor() {
     this.users = new Map();
@@ -117,6 +121,9 @@ export class MemStorage implements IStorage {
     this.parameters = new Map();
     this.appointments = new Map();
     this.reminders = new Map();
+    this.hospitals = new Map();
+    this.hospitalDoctors = new Map();
+    this.hospitalPatients = new Map();
     
     this.currentUserId = 1;
     this.currentMedicalReportId = 1;
@@ -125,6 +132,7 @@ export class MemStorage implements IStorage {
     this.currentParameterId = 1;
     this.currentAppointmentId = 1;
     this.currentReminderId = 1;
+    this.currentHospitalId = 1;
   }
 
   // User methods
@@ -827,6 +835,197 @@ export class MemStorage implements IStorage {
     
     return updatedReminder;
   }
+  
+  // Hospital methods
+  async getHospital(id: number): Promise<Hospital | undefined> {
+    return this.hospitals.get(id);
+  }
+  
+  async createHospital(hospital: InsertHospital): Promise<Hospital> {
+    const id = this.currentHospitalId++;
+    const createdAt = new Date();
+    
+    const newHospital: Hospital = {
+      ...hospital,
+      id,
+      createdAt
+    };
+    
+    this.hospitals.set(id, newHospital);
+    return newHospital;
+  }
+  
+  async getAllHospitals(): Promise<Hospital[]> {
+    return Array.from(this.hospitals.values());
+  }
+  
+  async getHospitalsByMunicipality(municipality: string): Promise<Hospital[]> {
+    return Array.from(this.hospitals.values())
+      .filter(hospital => hospital.municipality === municipality);
+  }
+  
+  async getHospitalDoctors(hospitalId: number): Promise<any[]> {
+    const hospital = await this.getHospital(hospitalId);
+    if (!hospital) {
+      throw new Error('Hospital not found');
+    }
+    
+    const doctorIds = Array.from(this.hospitalDoctors.values())
+      .filter(relation => relation.hospitalId === hospitalId)
+      .map(relation => relation.doctorId);
+    
+    const doctors = await Promise.all(
+      doctorIds.map(async (doctorId) => {
+        const doctor = await this.getUser(doctorId);
+        return doctor;
+      })
+    );
+    
+    return doctors.filter(doctor => doctor !== undefined);
+  }
+  
+  async addDoctorToHospital(hospitalDoctor: InsertHospitalDoctor): Promise<HospitalDoctor> {
+    const { hospitalId, doctorId } = hospitalDoctor;
+    
+    // Validate hospital exists
+    const hospital = await this.getHospital(hospitalId);
+    if (!hospital) {
+      throw new Error('Hospital not found');
+    }
+    
+    // Validate doctor exists and is a doctor
+    const doctor = await this.getUser(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      throw new Error('Doctor not found or user is not a doctor');
+    }
+    
+    const key = `${hospitalId}:${doctorId}`;
+    const relation: HospitalDoctor = {
+      ...hospitalDoctor,
+      createdAt: new Date()
+    };
+    
+    this.hospitalDoctors.set(key, relation);
+    return relation;
+  }
+  
+  async removeDoctorFromHospital(hospitalId: number, doctorId: number): Promise<void> {
+    const key = `${hospitalId}:${doctorId}`;
+    if (!this.hospitalDoctors.has(key)) {
+      throw new Error('Doctor is not associated with this hospital');
+    }
+    
+    this.hospitalDoctors.delete(key);
+  }
+  
+  async getHospitalPatients(hospitalId: number): Promise<any[]> {
+    const hospital = await this.getHospital(hospitalId);
+    if (!hospital) {
+      throw new Error('Hospital not found');
+    }
+    
+    const patientIds = Array.from(this.hospitalPatients.values())
+      .filter(relation => relation.hospitalId === hospitalId)
+      .map(relation => relation.patientId);
+    
+    const patients = await Promise.all(
+      patientIds.map(async (patientId) => {
+        const patient = await this.getUser(patientId);
+        return patient;
+      })
+    );
+    
+    return patients.filter(patient => patient !== undefined);
+  }
+  
+  async addPatientToHospital(hospitalPatient: InsertHospitalPatient): Promise<HospitalPatient> {
+    const { hospitalId, patientId } = hospitalPatient;
+    
+    // Validate hospital exists
+    const hospital = await this.getHospital(hospitalId);
+    if (!hospital) {
+      throw new Error('Hospital not found');
+    }
+    
+    // Validate patient exists and is a patient
+    const patient = await this.getUser(patientId);
+    if (!patient || patient.role !== 'patient') {
+      throw new Error('Patient not found or user is not a patient');
+    }
+    
+    const key = `${hospitalId}:${patientId}`;
+    const relation: HospitalPatient = {
+      ...hospitalPatient,
+      createdAt: new Date()
+    };
+    
+    this.hospitalPatients.set(key, relation);
+    return relation;
+  }
+  
+  async removePatientFromHospital(hospitalId: number, patientId: number): Promise<void> {
+    const key = `${hospitalId}:${patientId}`;
+    if (!this.hospitalPatients.has(key)) {
+      throw new Error('Patient is not associated with this hospital');
+    }
+    
+    this.hospitalPatients.delete(key);
+  }
+  
+  async getDoctorHospitals(doctorId: number): Promise<Hospital[]> {
+    const hospitalIds = Array.from(this.hospitalDoctors.values())
+      .filter(relation => relation.doctorId === doctorId)
+      .map(relation => relation.hospitalId);
+    
+    const hospitals = await Promise.all(
+      hospitalIds.map(async (hospitalId) => {
+        const hospital = await this.getHospital(hospitalId);
+        return hospital;
+      })
+    );
+    
+    return hospitals.filter((hospital): hospital is Hospital => hospital !== undefined);
+  }
+  
+  async getPatientHospitals(patientId: number): Promise<Hospital[]> {
+    const hospitalIds = Array.from(this.hospitalPatients.values())
+      .filter(relation => relation.patientId === patientId)
+      .map(relation => relation.hospitalId);
+    
+    const hospitals = await Promise.all(
+      hospitalIds.map(async (hospitalId) => {
+        const hospital = await this.getHospital(hospitalId);
+        return hospital;
+      })
+    );
+    
+    return hospitals.filter((hospital): hospital is Hospital => hospital !== undefined);
+  }
+  
+  // Appointment methods
+  async getAppointment(id: number): Promise<Appointment | undefined> {
+    return this.appointments.get(id);
+  }
+  
+  async updateAppointmentStatus(appointmentId: number, status: string, updatedBy: number): Promise<Appointment> {
+    const appointment = await this.getAppointment(appointmentId);
+    if (!appointment) {
+      throw new Error('Appointment not found');
+    }
+    
+    // Check if the person updating the appointment is either the doctor or the patient
+    if (appointment.doctorId !== updatedBy && appointment.patientId !== updatedBy) {
+      throw new Error('Not authorized to update this appointment');
+    }
+    
+    const updatedAppointment: Appointment = {
+      ...appointment,
+      status: status as any // Type casting for now, will be fixed with proper enum
+    };
+    
+    this.appointments.set(appointmentId, updatedAppointment);
+    return updatedAppointment;
+  }
 }
 
 export const storage = new MemStorage();
@@ -853,7 +1052,42 @@ export const setupMockData = async (storage: IStorage) => {
     role: "patient",
     dateOfBirth: new Date("1985-06-15").toISOString(),
     phone: "555-987-6543",
-    address: "456 Health St, New York, NY 10002"
+    address: "456 Health St, New York, NY 10002",
+    municipality: "New York"
+  });
+  
+  // Create sample hospitals
+  const generalHospital = await storage.createHospital({
+    name: "General Hospital",
+    type: "public",
+    municipality: "New York",
+    location: "40.7128,-74.0060" // Latitude, longitude for New York
+  });
+  
+  const specialtyClinic = await storage.createHospital({
+    name: "Specialty Medical Center",
+    type: "private",
+    municipality: "New York",
+    location: "40.7306,-73.9352"
+  });
+  
+  // Associate doctor with hospitals
+  await storage.addDoctorToHospital({
+    hospitalId: generalHospital.id,
+    doctorId: doctorUser.id,
+    assignedBy: null // System assignment for demo
+  });
+  
+  await storage.addDoctorToHospital({
+    hospitalId: specialtyClinic.id,
+    doctorId: doctorUser.id,
+    assignedBy: null
+  });
+  
+  // Associate patient with hospital
+  await storage.addPatientToHospital({
+    hospitalId: generalHospital.id,
+    patientId: patientUser.id
   });
 
   // Create health parameters for patient
