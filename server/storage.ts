@@ -593,16 +593,42 @@ export class MemStorage implements IStorage {
     }));
   }
   
-  async getAvailableDoctors(): Promise<any[]> {
-    return Array.from(this.users.values())
-      .filter(user => user.role === 'doctor')
-      .map(doctor => ({
+  async getAvailableDoctors(hospitalId?: number): Promise<any[]> {
+    let doctors = Array.from(this.users.values())
+      .filter(user => user.role === 'doctor');
+    
+    // If hospital ID is provided, filter doctors by that hospital
+    if (hospitalId) {
+      const hospitalDoctorIds = Array.from(this.hospitalDoctors.values())
+        .filter(relation => relation.hospitalId === hospitalId)
+        .map(relation => relation.doctorId);
+      
+      doctors = doctors.filter(doctor => hospitalDoctorIds.includes(doctor.id));
+    }
+    
+    // Map to return format with doctor details and hospital info
+    return Promise.all(doctors.map(async doctor => {
+      // If hospital filter was applied, get just that hospital
+      // Otherwise get all doctor's hospitals to show their primary affiliation
+      const hospitals = hospitalId 
+        ? [await this.getHospital(hospitalId)]
+        : await this.getDoctorHospitals(doctor.id);
+      
+      const primaryHospital = hospitals.length > 0 ? hospitals[0] : null;
+      
+      return {
         id: doctor.id,
         firstName: doctor.firstName,
         lastName: doctor.lastName,
-        // Add random specialty for demo purposes
-        specialty: ['Cardiology', 'Neurology', 'General Practice', 'Dermatology'][Math.floor(Math.random() * 4)]
-      }));
+        specialty: doctor.specialty || ['Cardiology', 'Neurology', 'General Practice', 'Dermatology'][Math.floor(Math.random() * 4)],
+        hospital: primaryHospital ? {
+          id: primaryHospital.id,
+          name: primaryHospital.name,
+          type: primaryHospital.type,
+          municipality: primaryHospital.municipality
+        } : null
+      };
+    }));
   }
   
   async getPatientAppointments(patientId: number, tab: string, date?: string, hospitalId?: number): Promise<any[]> {
