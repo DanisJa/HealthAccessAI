@@ -28,9 +28,9 @@ interface SidebarLinkProps {
 const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
   return (
     <Link href={href}>
-      <a
+      <div
         className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
+          'flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer',
           active 
             ? 'bg-primary/10 text-primary font-medium' 
             : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground'
@@ -38,7 +38,7 @@ const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
       >
         {icon}
         <span>{children}</span>
-      </a>
+      </div>
     </Link>
   );
 };

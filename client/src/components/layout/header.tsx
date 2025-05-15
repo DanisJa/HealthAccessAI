@@ -22,10 +22,17 @@ export function Header() {
   
   const logoutMutation = {
     mutate: async () => {
-      await apiRequest('/api/auth/logout', {
-        method: 'POST',
-      });
-      navigate('/auth/login');
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        navigate('/auth/login');
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
     },
   };
 
