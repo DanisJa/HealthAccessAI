@@ -12,12 +12,30 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { LoginInput, RegisterInput, loginSchema, registerSchema } from "@shared/schema";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  LoginInput,
+  RegisterInput,
+  loginSchema,
+  registerSchema,
+} from "@shared/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type AuthType = "login" | "register";
 
@@ -65,7 +83,10 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
       console.error(error);
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Please check your credentials and try again",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please check your credentials and try again",
         variant: "destructive",
       });
     } finally {
@@ -86,7 +107,10 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
       console.error(error);
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "Please check your information and try again",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please check your information and try again",
         variant: "destructive",
       });
     } finally {
@@ -96,7 +120,10 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
 
   const renderLoginForm = () => (
     <Form {...loginForm}>
-      <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+      <form
+        onSubmit={loginForm.handleSubmit(handleLogin)}
+        className="space-y-4"
+      >
         <FormField
           control={loginForm.control}
           name="email"
@@ -139,7 +166,10 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
 
   const renderRegisterForm = () => (
     <Form {...registerForm}>
-      <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+      <form
+        onSubmit={registerForm.handleSubmit(handleRegister)}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={registerForm.control}
@@ -187,10 +217,7 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>I am a</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select your role" />
@@ -249,8 +276,11 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
     <Card>
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-4">
-          <span className="material-icons text-primary text-3xl mr-2">favorite</span>
-          <h1 className="text-2xl font-bold text-primary font-heading">HealthIoT</h1>
+          {/* <span className="material-icons text-primary text-3xl mr-2">
+            favorite
+          </span> */}
+          <img src="../../../public/logo.png" />
+          <h1 className="text-2xl font-bold text-primary font-heading">Medi</h1>
         </div>
         <CardTitle className="text-2xl font-bold text-center">
           {type === "login" ? "Sign In" : "Create an Account"}
