@@ -200,7 +200,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
         </div>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t fixed bottom-0 w-64">
           <Button
             variant="ghost"
             className="w-full justify-start"
