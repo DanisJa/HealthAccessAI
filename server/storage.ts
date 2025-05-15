@@ -77,12 +77,12 @@ export interface IStorage {
   updateAppointmentStatus(appointmentId: number, status: string, updatedBy: number): Promise<Appointment>;
   
   // Patient methods
-  getPatientStats(patientId: number): Promise<any>;
-  getPatientUpcomingAppointments(patientId: number): Promise<any[]>;
+  getPatientStats(patientId: number, hospitalId?: number): Promise<any>;
+  getPatientUpcomingAppointments(patientId: number, hospitalId?: number): Promise<any[]>;
   getAvailableDoctors(hospitalId?: number): Promise<any[]>;
-  getPatientAppointments(patientId: number, tab: string, date?: string): Promise<any[]>;
-  getPatientParameters(patientId: number): Promise<any[]>;
-  getPatientRecentParameters(patientId: number): Promise<any[]>;
+  getPatientAppointments(patientId: number, tab: string, date?: string, hospitalId?: number): Promise<any[]>;
+  getPatientParameters(patientId: number, hospitalId?: number): Promise<any[]>;
+  getPatientRecentParameters(patientId: number, hospitalId?: number): Promise<any[]>;
   createParameter(parameter: InsertParameter): Promise<Parameter>;
   getPatientMedicalRecords(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
   getPatientMedications(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
@@ -734,18 +734,40 @@ export class MemStorage implements IStorage {
     return appointment;
   }
   
-  async getPatientParameters(patientId: number): Promise<any[]> {
+  async getPatientParameters(patientId: number, hospitalId?: number): Promise<any[]> {
     return Array.from(this.parameters.values())
-      .filter(parameter => parameter.patientId === patientId)
+      .filter(parameter => {
+        // Base filter - must match patient
+        const patientMatch = parameter.patientId === patientId;
+        
+        // Hospital filter (if specified)
+        if (hospitalId) {
+          // Include parameters with matching hospitalId or null/undefined hospitalId
+          return patientMatch && (parameter.hospitalId === hospitalId || !parameter.hospitalId);
+        }
+        
+        return patientMatch;
+      })
       .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
   }
   
-  async getPatientRecentParameters(patientId: number): Promise<any[]> {
+  async getPatientRecentParameters(patientId: number, hospitalId?: number): Promise<any[]> {
     // Group parameters by type
     const parametersByType = new Map<string, Parameter[]>();
     
     Array.from(this.parameters.values())
-      .filter(parameter => parameter.patientId === patientId)
+      .filter(parameter => {
+        // Base filter - must match patient
+        const patientMatch = parameter.patientId === patientId;
+        
+        // Hospital filter (if specified)
+        if (hospitalId) {
+          // Include parameters with matching hospitalId or null/undefined hospitalId
+          return patientMatch && (parameter.hospitalId === hospitalId || !parameter.hospitalId);
+        }
+        
+        return patientMatch;
+      })
       .forEach(parameter => {
         if (!parametersByType.has(parameter.type)) {
           parametersByType.set(parameter.type, []);
