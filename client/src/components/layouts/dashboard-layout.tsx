@@ -47,7 +47,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/doctor', label: 'Dashboard', icon: <BarChart3 className="h-5 w-5" /> },
         { href: '/doctor/patients', label: 'Patients', icon: <UserRound className="h-5 w-5" /> },
         { href: '/doctor/appointments', label: 'Appointments', icon: <CalendarDays className="h-5 w-5" /> },
-        { href: '/doctor/records', label: 'Medical Records', icon: <ClipboardList className="h-5 w-5" /> },
+        { href: '/doctor/medical-records', label: 'Medical Records', icon: <ClipboardList className="h-5 w-5" /> },
         { href: '/doctor/prescriptions', label: 'Prescriptions', icon: <Pill className="h-5 w-5" /> },
         { href: '/doctor/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
       ];

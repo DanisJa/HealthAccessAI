@@ -32,9 +32,14 @@ export default function DoctorDashboard() {
     queryKey: ['/api/doctor/appointments/today', selectedHospital?.id],
     queryFn: async () => {
       const url = selectedHospital 
-        ? `/api/doctor/appointments/today?hospitalId=${selectedHospital.id}`
-        : '/api/doctor/appointments/today';
-      return apiRequest(url);
+        ? `/api/doctor/today-appointments?hospitalId=${selectedHospital.id}`
+        : '/api/doctor/today-appointments';
+      const response = await fetch(url);
+      if (!response.ok) {
+        // Fallback data if API fails
+        return [];
+      }
+      return response.json();
     },
     enabled: !!user,
   });

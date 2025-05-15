@@ -45,6 +45,19 @@ export function HealthParameters({ patients, selectedPatientId, onPatientSelect 
 
   const { data: parameters, isLoading } = useQuery({
     queryKey: ['/api/doctor/patients/parameters', selectedId],
+    queryFn: async () => {
+      if (!selectedId) return [];
+      try {
+        const response = await fetch(`/api/doctor/patients/parameters?patientId=${selectedId}`);
+        if (!response.ok) {
+          return [];
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Failed to fetch patient parameters:", error);
+        return [];
+      }
+    },
     enabled: !!selectedId,
   });
 
