@@ -1,9 +1,12 @@
-import { pgTable, text, serial, integer, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, pgEnum, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Define user roles enum
 export const roleEnum = pgEnum('role', ['patient', 'doctor']);
+
+// Define hospital types enum
+export const hospitalTypeEnum = pgEnum('hospital_type', ['public', 'private']);
 
 // Users table
 export const users = pgTable("users", {
@@ -13,6 +16,11 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   role: roleEnum("role").notNull().default('patient'),
+  municipality: text("municipality"), // For patients - determines which public hospitals they can access
+  address: text("address"),
+  phone: text("phone"),
+  dateOfBirth: timestamp("date_of_birth"),
+  specialty: text("specialty"), // For doctors
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,16 +71,22 @@ export const parameters = pgTable("parameters", {
   notes: text("notes"),
 });
 
+// Define appointment status enum
+export const appointmentStatusEnum = pgEnum('appointment_status', ['pending', 'approved', 'rejected', 'completed', 'cancelled']);
+
 // Appointments table
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
   patientId: integer("patient_id").notNull().references(() => users.id),
   doctorId: integer("doctor_id").notNull().references(() => users.id),
+  hospitalId: integer("hospital_id").notNull().references(() => hospitals.id),
   date: timestamp("date").notNull(),
   duration: integer("duration").notNull().default(30), // Duration in minutes
   title: text("title").notNull(),
   description: text("description"),
-  status: text("status").notNull().default('scheduled'),
+  status: appointmentStatusEnum("status").notNull().default('pending'),
+  createdBy: integer("created_by").notNull().references(() => users.id), // Can be patient or doctor
+  type: text("type"), // e.g. 'In-person', 'Video', 'Phone'
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -87,6 +101,31 @@ export const reminders = pgTable("reminders", {
   recurring: boolean("recurring").default(false),
   frequency: text("frequency"), // e.g. 'daily', 'weekly', etc.
   completed: boolean("completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Hospitals table
+export const hospitals = pgTable("hospitals", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: hospitalTypeEnum("type").notNull(),
+  municipality: text("municipality").notNull(),
+  location: text("location").notNull(), // Can store latitude,longitude or address
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Hospital-Doctor relationship (many-to-many)
+export const hospitalDoctors = pgTable("hospital_doctors", {
+  hospitalId: integer("hospital_id").notNull().references(() => hospitals.id),
+  doctorId: integer("doctor_id").notNull().references(() => users.id),
+  assignedBy: integer("assigned_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Hospital-Patient relationship (many-to-many)
+export const hospitalPatients = pgTable("hospital_patients", {
+  hospitalId: integer("hospital_id").notNull().references(() => hospitals.id),
+  patientId: integer("patient_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -1,0 +1,126 @@
+# 🏥 Replit Enhancement Prompt: Multitenant Hospital System + Refined Appointment Flow
+
+## 🛠️ Background
+The base application is a role-based healthcare system with separate panels for **patients** and **doctors**, powered by **Supabase**. The system needs to evolve to support **multitenancy via hospitals**, with geolocation logic and refined appointment workflows.
+
+---
+
+## 🧱 Core Additions
+
+### 🏥 Hospital & Location Structure
+Introduce the following entities in Supabase:
+
+#### `hospitals` Table
+- `id` (UUID, PK)
+- `name`
+- `type` (`public` / `private`)
+- `municipality` (text)
+- `location` (lat/lng or city name)
+- `created_at`
+
+#### `hospital_doctors` Table (many-to-many)
+- `hospital_id`
+- `doctor_id`
+- `assigned_by`
+- `created_at`
+
+#### `hospital_patients` Table (many-to-many, optional)
+- `hospital_id`
+- `patient_id`
+- `created_at`
+
+---
+
+## 👥 User Roles
+
+### Doctor
+- Registers normally.
+- Can be invited by a hospital.
+- Can accept/decline hospital invites.
+- Can work in multiple hospitals.
+
+### Patient
+- Registers normally.
+- Can only make appointments with:
+  - **Public hospitals** in their **own municipality**
+  - **Any private hospital**
+
+---
+
+## 📅 Refined Appointment Flow
+
+### `appointments` Table (refined)
+Add the following fields:
+- `hospital_id`
+- `patient_id`
+- `doctor_id`
+- `status` (`pending`, `approved`, `rejected`)
+- `created_by` (patient or doctor)
+- `datetime`
+
+### ✅ Appointment Rules
+
+1. **Patients can request appointments** with:
+   - A **doctor** from a **hospital** in their **municipality** (*if public*)
+   - **Any private hospital** doctor
+
+2. **Doctors can create appointments** with:
+   - **Any patient** assigned to one of their hospitals
+   - Or invite them via email if needed
+
+3. **Doctors must approve** any appointment **requested by patient**
+
+4. **Doctor dashboards** should now display:
+   - Filtered view of appointments per hospital
+   - Tabs for `Pending`, `Approved`, `Rejected`
+
+5. **Patient dashboards** should:
+   - Filter available doctors by municipality and hospital type
+   - Show `Requested`, `Confirmed`, `Past` appointments
+
+---
+
+## 🔐 Multitenancy Enforcement (via Supabase RLS)
+
+- Restrict doctor access to only their `hospital_doctors`
+- Restrict patient requests to `hospitals.municipality = patient.municipality` (for public)
+- Add Supabase RLS policies:
+  - `appointments.doctor_id = auth.uid()` OR doctor is in the hospital
+  - `appointments.patient_id = auth.uid()` OR patient is in same hospital
+
+---
+
+## 🧠 Supabase Functions or Edge APIs (Optional)
+- `createAppointment(patient_id, doctor_id, hospital_id, datetime)`
+  - Checks eligibility based on rules above
+- `inviteDoctor(hospital_id, doctor_email)`
+  - Sends invite if doctor isn’t assigned
+
+---
+
+## 🔜 Tasks Breakdown
+
+### Backend (Supabase)
+- [ ] Add `hospitals`, `hospital_doctors`, `hospital_patients`
+- [ ] Update `appointments` table
+- [ ] Apply RLS for hospital-based visibility
+
+### Frontend (React)
+- [ ] Doctor panel: Add tabs for hospital filtering and approval workflow
+- [ ] Patient panel: Hospital-aware doctor browsing
+- [ ] Appointment forms: Include hospital selection logic and filtering
+
+### AI Chatbot (Optional Future Update)
+- Add prompts like:  
+  _“Where is the nearest private hospital in my city?”_  
+  _“Can I make an appointment at Sarajevo General Hospital?”_
+
+---
+
+## ✅ Result
+A fully multitenant, hospital-aware healthcare system where:
+- Doctors can work in many hospitals
+- Patients are routed based on hospital type and location
+- Appointments are doctor-controlled but patient-initiated
+- Role-based access is enforced using Supabase RLS
+
