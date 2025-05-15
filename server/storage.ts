@@ -84,10 +84,10 @@ export interface IStorage {
   getPatientParameters(patientId: number): Promise<any[]>;
   getPatientRecentParameters(patientId: number): Promise<any[]>;
   createParameter(parameter: InsertParameter): Promise<Parameter>;
-  getPatientMedicalRecords(patientId: number, tab: string, page: number, search: string): Promise<any[]>;
-  getPatientMedications(patientId: number, tab: string, page: number, search: string): Promise<any[]>;
-  getPatientReminders(patientId: number): Promise<any[]>;
-  getPatientFilteredReminders(patientId: number, tab: string, page: number, search: string): Promise<any[]>;
+  getPatientMedicalRecords(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
+  getPatientMedications(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
+  getPatientReminders(patientId: number, hospitalId?: number): Promise<any[]>;
+  getPatientFilteredReminders(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]>;
   createReminder(reminder: InsertReminder): Promise<Reminder>;
   completeReminder(reminderId: number, userId: number): Promise<Reminder>;
 }
@@ -777,14 +777,42 @@ export class MemStorage implements IStorage {
     return parameter;
   }
   
-  async getPatientMedicalRecords(patientId: number, tab: string, page: number, search: string): Promise<any[]> {
+  async getPatientMedicalRecords(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]> {
+    // Get hospital-doctor relationships to filter records by doctors in specified hospital
+    let doctorIdsInHospital: number[] = [];
+    
+    if (hospitalId) {
+      // Find all doctors working at this hospital
+      Array.from(this.hospitalDoctors.values())
+        .filter(relation => relation.hospitalId === hospitalId)
+        .forEach(relation => doctorIdsInHospital.push(relation.doctorId));
+    }
+    
     // Combine medical reports and orders
     const reports = Array.from(this.medicalReports.values())
-      .filter(report => report.patientId === patientId)
+      .filter(report => {
+        const matchesPatient = report.patientId === patientId;
+        
+        // If hospital filter is applied, only include reports from doctors at that hospital
+        if (hospitalId) {
+          return matchesPatient && doctorIdsInHospital.includes(report.doctorId);
+        }
+        
+        return matchesPatient;
+      })
       .map(report => ({ ...report, type: 'report' }));
     
     const orders = Array.from(this.medicalOrders.values())
-      .filter(order => order.patientId === patientId)
+      .filter(order => {
+        const matchesPatient = order.patientId === patientId;
+        
+        // If hospital filter is applied, only include orders from doctors at that hospital
+        if (hospitalId) {
+          return matchesPatient && doctorIdsInHospital.includes(order.doctorId);
+        }
+        
+        return matchesPatient;
+      })
       .map(order => ({ ...order, type: 'order' }));
     
     let records = [...reports, ...orders];
@@ -827,9 +855,28 @@ export class MemStorage implements IStorage {
     });
   }
   
-  async getPatientMedications(patientId: number, tab: string, page: number, search: string): Promise<any[]> {
+  async getPatientMedications(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]> {
+    // Get hospital-doctor relationships to filter records by doctors in specified hospital
+    let doctorIdsInHospital: number[] = [];
+    
+    if (hospitalId) {
+      // Find all doctors working at this hospital
+      Array.from(this.hospitalDoctors.values())
+        .filter(relation => relation.hospitalId === hospitalId)
+        .forEach(relation => doctorIdsInHospital.push(relation.doctorId));
+    }
+    
     let medications = Array.from(this.prescriptions.values())
-      .filter(prescription => prescription.patientId === patientId);
+      .filter(prescription => {
+        const matchesPatient = prescription.patientId === patientId;
+        
+        // If hospital filter is applied, only include prescriptions from doctors at that hospital
+        if (hospitalId) {
+          return matchesPatient && doctorIdsInHospital.includes(prescription.doctorId);
+        }
+        
+        return matchesPatient;
+      });
     
     // Apply search filter if provided
     if (search) {
@@ -869,28 +916,93 @@ export class MemStorage implements IStorage {
     });
   }
   
-  async getPatientReminders(patientId: number): Promise<any[]> {
+  async getPatientReminders(patientId: number, hospitalId?: number): Promise<any[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
     nextWeek.setHours(23, 59, 59, 999);
+
+    // Get hospital-specific doctor appointments that have reminders
+    let remindersFromAppointments: Reminder[] = [];
+    if (hospitalId) {
+      // First get appointments for this patient at this hospital
+      const appointments = Array.from(this.appointments.values())
+        .filter(appointment => 
+          appointment.patientId === patientId && 
+          appointment.hospitalId === hospitalId
+        );
+      
+      // Then find any reminders related to appointment followups
+      // Here we're connecting based on titles that may contain the word "followup"
+      // In a real app, there would be a direct relationship between reminders and appointments
+      if (appointments.length > 0) {
+        const appointmentReminders = Array.from(this.reminders.values())
+          .filter(reminder => 
+            reminder.userId === patientId && 
+            !reminder.completed &&
+            appointments.some(apt => 
+              reminder.title.toLowerCase().includes('followup') &&
+              reminder.title.toLowerCase().includes(apt.title.toLowerCase())
+            ) &&
+            new Date(reminder.dueDate) >= today && 
+            new Date(reminder.dueDate) <= nextWeek
+          );
+        
+        remindersFromAppointments = appointmentReminders;
+      }
+    }
     
-    const reminders = Array.from(this.reminders.values())
+    // Get regular reminders
+    const regularReminders = Array.from(this.reminders.values())
       .filter(reminder => 
         reminder.userId === patientId && 
         !reminder.completed &&
         new Date(reminder.dueDate) >= today && 
-        new Date(reminder.dueDate) <= nextWeek
-      )
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        new Date(reminder.dueDate) <= nextWeek &&
+        // Filter out appointment reminders if we're filtering by hospital
+        (!hospitalId || !reminder.title.toLowerCase().includes('followup'))
+      );
     
-    return reminders;
+    // Combine and sort all reminders
+    const combinedReminders = hospitalId 
+      ? [...remindersFromAppointments, ...regularReminders]
+      : regularReminders;
+      
+    return combinedReminders.sort((a, b) => 
+      new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    );
   }
   
-  async getPatientFilteredReminders(patientId: number, tab: string, page: number, search: string): Promise<any[]> {
+  async getPatientFilteredReminders(patientId: number, tab: string, page: number, search: string, hospitalId?: number): Promise<any[]> {
+    // Get hospital-specific doctor appointments that have reminders
+    let hospitalAppointments: Appointment[] = [];
+    if (hospitalId) {
+      hospitalAppointments = Array.from(this.appointments.values())
+        .filter(appointment => 
+          appointment.patientId === patientId && 
+          appointment.hospitalId === hospitalId
+        );
+    }
+    
     let reminders = Array.from(this.reminders.values())
-      .filter(reminder => reminder.userId === patientId);
+      .filter(reminder => {
+        const matchesPatient = reminder.userId === patientId;
+        
+        // If hospital filter is applied, only include reminders related to this hospital
+        if (hospitalId && hospitalAppointments.length > 0) {
+          // Check if reminder is related to a hospital appointment (for followups)
+          const isHospitalRelated = reminder.title.toLowerCase().includes('followup') && 
+            hospitalAppointments.some(apt => 
+              reminder.title.toLowerCase().includes(apt.title.toLowerCase())
+            );
+          
+          // Include both hospital-specific reminders and non-hospital-specific reminders
+          return matchesPatient && (isHospitalRelated || !reminder.title.toLowerCase().includes('followup'));
+        }
+        
+        return matchesPatient;
+      });
     
     // Apply search filter if provided
     if (search) {
