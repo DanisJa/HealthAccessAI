@@ -49,6 +49,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/doctor/appointments', label: 'Appointments', icon: <CalendarDays className="h-5 w-5" /> },
         { href: '/doctor/medical-records', label: 'Medical Records', icon: <ClipboardList className="h-5 w-5" /> },
         { href: '/doctor/prescriptions', label: 'Prescriptions', icon: <Pill className="h-5 w-5" /> },
+        { href: '/doctor/analytics', label: 'Analytics', icon: <Activity className="h-5 w-5" /> },
         { href: '/doctor/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
       ];
     } else if (user.role === 'hospital') {

@@ -16,6 +16,7 @@ import DoctorPatients from "@/pages/doctor/patients";
 import DoctorMedicalRecords from "@/pages/doctor/medical-records";
 import DoctorAppointments from "@/pages/doctor/appointments";
 import DoctorPrescriptions from "@/pages/doctor/prescriptions";
+import DoctorAnalytics from "@/pages/doctor/analytics";
 import PatientDashboard from "@/pages/patient";
 import PatientHealth from "@/pages/patient/health";
 import PatientMedicalRecords from "@/pages/patient/medical-records";
@@ -87,6 +88,9 @@ function Router() {
         </Route>
         <Route path="/doctor/prescriptions">
           {() => <ProtectedRoute component={DoctorPrescriptions} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/analytics">
+          {() => <ProtectedRoute component={DoctorAnalytics} roles={['doctor']} />}
         </Route>
         <Route path="/doctor/settings">
           {() => <ProtectedRoute component={Settings} roles={['doctor']} />}

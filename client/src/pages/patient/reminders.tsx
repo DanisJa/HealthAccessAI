@@ -58,7 +58,8 @@ export default function PatientReminders() {
   const { toast } = useToast();
   const { selectedHospital } = useHospital();
   
-  const hospitalId = selectedHospital?.id;
+  // Ensure hospitalId is properly typed as a number or undefined
+  const hospitalId = selectedHospital && typeof selectedHospital === 'object' ? selectedHospital.id : undefined;
 
   const { data: reminders, isLoading } = useQuery({
     queryKey: ['/api/patient/reminders', tab, page, search, hospitalId],
@@ -189,7 +190,12 @@ export default function PatientReminders() {
     }
   };
 
-  const getReminderIcon = (type: string) => {
+  const getReminderIcon = (type: string | undefined) => {
+    // Handle undefined or null case
+    if (!type) {
+      return <span className="material-icons">notifications</span>;
+    }
+    
     switch (type.toLowerCase()) {
       case 'medication':
         return <span className="material-icons">medication</span>;
@@ -208,7 +214,7 @@ export default function PatientReminders() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-heading">My Reminders</h1>
-            {selectedHospital && (
+            {selectedHospital && typeof selectedHospital === 'object' && selectedHospital.name && (
               <p className="text-sm text-muted-foreground">
                 Filtered by {selectedHospital.name}
               </p>
@@ -295,7 +301,7 @@ export default function PatientReminders() {
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {reminder.type.charAt(0).toUpperCase() + reminder.type.slice(1)}
+                                {reminder.type ? `${reminder.type.charAt(0).toUpperCase()}${reminder.type.slice(1)}` : 'General'}
                               </Badge>
                             </TableCell>
                             <TableCell>
