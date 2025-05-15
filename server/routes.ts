@@ -400,6 +400,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Hospital Routes
+  
+  // Get all hospitals
+  app.get("/api/hospitals", async (req, res) => {
+    try {
+      const hospitals = await storage.getAllHospitals();
+      res.status(200).json(hospitals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get hospitals" });
+    }
+  });
+  
+  // Get hospital by ID
+  app.get("/api/hospitals/:id", async (req, res) => {
+    try {
+      const hospitalId = parseInt(req.params.id);
+      if (isNaN(hospitalId)) {
+        return res.status(400).json({ message: "Invalid hospital ID" });
+      }
+      
+      const hospital = await storage.getHospital(hospitalId);
+      if (!hospital) {
+        return res.status(404).json({ message: "Hospital not found" });
+      }
+      
+      res.status(200).json(hospital);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get hospital" });
+    }
+  });
+  
+  // Get hospitals by municipality
+  app.get("/api/hospitals/municipality/:municipality", async (req, res) => {
+    try {
+      const { municipality } = req.params;
+      const hospitals = await storage.getHospitalsByMunicipality(municipality);
+      res.status(200).json(hospitals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get hospitals by municipality" });
+    }
+  });
+  
+  // Get hospitals associated with a doctor
+  app.get("/api/doctor/hospitals", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "doctor") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const hospitals = await storage.getDoctorHospitals(user.id);
+      res.status(200).json(hospitals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get doctor's hospitals" });
+    }
+  });
+  
+  // Get hospitals associated with a patient
+  app.get("/api/patient/hospitals", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "patient") {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const hospitals = await storage.getPatientHospitals(user.id);
+      res.status(200).json(hospitals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get patient's hospitals" });
+    }
+  });
+  
   // Patient Routes
   
   // Get patient dashboard stats
