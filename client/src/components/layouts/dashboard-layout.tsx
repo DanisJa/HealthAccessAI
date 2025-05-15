@@ -158,11 +158,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <div className="hidden md:flex flex-col w-64 border-r bg-white">
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-semibold">Healthcare Portal</h1>
-          <p className="text-sm text-muted-foreground capitalize">
-            {user.role} Portal
-          </p>
+        <div className="border-b">
+          {/* <h1 className="text-xl font-semibold">Healthcare Portal</h1> */}
+          <div className="flex items-center gap-2 px-2">
+            <img src="../../../public/logo.png" className="w-24 h-24" />
+            <p className="text-sm text-muted-foreground capitalize">
+              {user.role} Portal
+            </p>
+          </div>
         </div>
 
         <div className="flex-1 py-6 px-4">

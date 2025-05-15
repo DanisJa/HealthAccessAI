@@ -37,15 +37,16 @@ export default function Dashboard() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 flex flex-col items-center">
             <div className="flex items-center justify-center mb-4">
-              <span className="material-icons text-primary text-3xl mr-2">
+              <img src="../../public/logo.png" />
+              {/* <span className="material-icons text-primary text-3xl mr-2">
                 favorite
-              </span>
+              </span> */}
               <h1 className="text-2xl font-bold text-primary font-heading">
-                HealthIoT
+                Medi
               </h1>
             </div>
             <h2 className="text-2xl font-bold mb-4 font-heading">
-              Welcome to HealthIoT
+              Welcome to Medi
             </h2>
             <p className="text-center mb-6 text-muted-foreground">
               A secure healthcare platform for patients and doctors, with IoT
