@@ -51,7 +51,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: <CalendarDays className="h-5 w-5" />,
         },
         {
-          href: "/patient/records",
+          href: "/patient/medical-records",
           label: "Medical Records",
           icon: <ClipboardList className="h-5 w-5" />,
         },
