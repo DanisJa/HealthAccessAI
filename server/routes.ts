@@ -681,8 +681,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const { tab = "all", page = 1, search = "" } = req.query;
-      const records = await storage.getPatientMedicalRecords(user.id, tab as string, parseInt(page as string), search as string);
+      const { tab = "all", page = 1, search = "", hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const records = await storage.getPatientMedicalRecords(
+        user.id, 
+        tab as string, 
+        parseInt(page as string), 
+        search as string,
+        hospitalIdParam
+      );
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ message: "Failed to get medical records" });
@@ -701,8 +709,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const { tab = "active", page = 1, search = "" } = req.query;
-      const medications = await storage.getPatientMedications(user.id, tab as string, parseInt(page as string), search as string);
+      const { tab = "active", page = 1, search = "", hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const medications = await storage.getPatientMedications(
+        user.id, 
+        tab as string, 
+        parseInt(page as string), 
+        search as string,
+        hospitalIdParam
+      );
       res.status(200).json(medications);
     } catch (error) {
       res.status(500).json({ message: "Failed to get medications" });
@@ -721,27 +737,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const reminders = await storage.getPatientReminders(user.id);
-      res.status(200).json(reminders);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get reminders" });
-    }
-  });
-  
-  // Get filtered reminders for patient
-  app.get("/api/patient/reminders", async (req, res) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    
-    try {
-      const user = await storage.getUser(req.session.userId);
-      if (!user || user.role !== "patient") {
-        return res.status(403).json({ message: "Forbidden" });
+      const { tab = "active", page = 1, search = "", hospitalId, filtered } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      // If filtered parameter is present, use the filtered API
+      if (filtered === "true") {
+        const reminders = await storage.getPatientFilteredReminders(
+          user.id, 
+          tab as string, 
+          parseInt(page as string), 
+          search as string,
+          hospitalIdParam
+        );
+        return res.status(200).json(reminders);
       }
       
-      const { tab = "active", page = 1, search = "" } = req.query;
-      const reminders = await storage.getPatientFilteredReminders(user.id, tab as string, parseInt(page as string), search as string);
+      // Otherwise use the basic reminders API
+      const reminders = await storage.getPatientReminders(user.id, hospitalIdParam);
       res.status(200).json(reminders);
     } catch (error) {
       res.status(500).json({ message: "Failed to get reminders" });
