@@ -3,6 +3,7 @@ import { Link, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { MessageThread } from "@/components/messaging/message-thread";
 import { ArrowLeft } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default function MessageThreadPage() {
   const params = useParams();
@@ -10,7 +11,7 @@ export default function MessageThreadPage() {
   
   if (isNaN(messageId)) {
     return (
-      <div className="container py-6">
+      <PageContainer>
         <div className="text-center">
           <h1 className="text-2xl font-bold">Invalid Message ID</h1>
           <p className="text-muted-foreground mt-2">
@@ -20,25 +21,27 @@ export default function MessageThreadPage() {
             <Button className="mt-4">Go back to messages</Button>
           </Link>
         </div>
-      </div>
+      </PageContainer>
     );
   }
   
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/messages">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Message Thread</h1>
-          <p className="text-muted-foreground">View and reply to messages</p>
+    <PageContainer>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/messages">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Message Thread</h1>
+            <p className="text-muted-foreground">View and reply to messages</p>
+          </div>
         </div>
+        
+        <MessageThread messageId={messageId} />
       </div>
-      
-      <MessageThread messageId={messageId} />
-    </div>
+    </PageContainer>
   );
 }

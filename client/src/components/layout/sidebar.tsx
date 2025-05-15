@@ -1,113 +1,229 @@
-import { useMemo } from "react";
-import { useLocation, Link } from "wouter";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
-import { useRole } from "@/hooks/use-role";
-import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  Calendar, 
-  Pill, 
-  BarChart3, 
-  MessageSquare, 
-  Settings, 
-  Heart, 
-  Bell
-} from "lucide-react";
+import React from 'react';
+import { Link, useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
+import {
+  LayoutDashboard,
+  User,
+  Calendar,
+  FileText,
+  PieChart,
+  Heart,
+  MessageSquare,
+  Pill,
+  Bell,
+  Users,
+  Building2,
+  HelpCircle,
+  Settings
+} from 'lucide-react';
 
-interface SidebarItemProps {
+interface SidebarLinkProps {
   href: string;
   icon: React.ReactNode;
-  label: string;
-  active: boolean;
+  children: React.ReactNode;
+  active?: boolean;
 }
 
-function SidebarItem({ href, icon, label, active }: SidebarItemProps) {
+const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
   return (
-    <li>
-      <Link href={href}>
-        <a className={cn(
-          "flex items-center p-2 text-base font-normal rounded-lg",
+    <Link href={href}>
+      <a
+        className={cn(
+          'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
           active 
-            ? "text-primary bg-primary-light bg-opacity-10" 
-            : "text-neutral-dark hover:bg-neutral-lightest"
-        )}>
-          {icon}
-          <span className="ml-3">{label}</span>
-        </a>
-      </Link>
-    </li>
+            ? 'bg-primary/10 text-primary font-medium' 
+            : 'text-muted-foreground hover:bg-gray-100 hover:text-foreground'
+        )}
+      >
+        {icon}
+        <span>{children}</span>
+      </a>
+    </Link>
   );
-}
+};
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
-  const { isDoctor, isPatient } = useRole();
-  
-  const doctorLinks = useMemo(() => [
-    { href: "/doctor", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
-    { href: "/doctor/patients", icon: <Users className="h-5 w-5" />, label: "Patients" },
-    { href: "/doctor/medical-records", icon: <FileText className="h-5 w-5" />, label: "Medical Records" },
-    { href: "/doctor/appointments", icon: <Calendar className="h-5 w-5" />, label: "Appointments" },
-    { href: "/doctor/prescriptions", icon: <Pill className="h-5 w-5" />, label: "Prescriptions" },
-    { href: "/doctor/analytics", icon: <BarChart3 className="h-5 w-5" />, label: "Analytics" },
-    { href: "/doctor/messages", icon: <MessageSquare className="h-5 w-5" />, label: "Messages" },
-    { href: "/doctor/settings", icon: <Settings className="h-5 w-5" />, label: "Settings" }
-  ], []);
-  
-  const patientLinks = useMemo(() => [
-    { href: "/patient", icon: <LayoutDashboard className="h-5 w-5" />, label: "Dashboard" },
-    { href: "/patient/health", icon: <Heart className="h-5 w-5" />, label: "My Health" },
-    { href: "/patient/medical-records", icon: <FileText className="h-5 w-5" />, label: "Medical Records" },
-    { href: "/patient/appointments", icon: <Calendar className="h-5 w-5" />, label: "Appointments" },
-    { href: "/patient/medications", icon: <Pill className="h-5 w-5" />, label: "Medications" },
-    { href: "/patient/reminders", icon: <Bell className="h-5 w-5" />, label: "Reminders" },
-    { href: "/patient/messages", icon: <MessageSquare className="h-5 w-5" />, label: "Messages" },
-    { href: "/patient/settings", icon: <Settings className="h-5 w-5" />, label: "Settings" }
-  ], []);
-  
-  const links = useMemo(() => {
-    if (isDoctor) return doctorLinks;
-    if (isPatient) return patientLinks;
-    return [];
-  }, [isDoctor, isPatient, doctorLinks, patientLinks]);
-  
-  if (!user) return null;
-  
+  const { data: user } = useQuery({
+    queryKey: ['/api/auth/me'],
+  });
+
+  const role = user?.role || 'patient';
+
+  const isActive = (path: string) => {
+    return location.startsWith(path);
+  };
+
   return (
-    <aside className="bg-white shadow-md hidden md:block md:w-64 h-screen">
-      <div className="h-full px-3 py-4 overflow-y-auto">
-        <div className="flex items-center mb-5 ml-2">
-          <span className="material-icons text-primary text-2xl mr-2">favorite</span>
-          <h1 className="text-xl font-bold text-primary font-heading">HealthIoT</h1>
-        </div>
-        
-        <ul className="space-y-2">
-          {links.map((link) => (
-            <SidebarItem 
-              key={link.href}
-              href={link.href}
-              icon={link.icon}
-              label={link.label}
-              active={location === link.href}
-            />
-          ))}
-        </ul>
-        
-        <div className="pt-4 mt-8 border-t border-neutral-light">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-neutral-dark"
-            onClick={() => logout()}
-          >
-            <span className="material-icons mr-3">logout</span>
-            Sign Out
-          </Button>
-        </div>
+    <div className="w-64 border-r bg-white shrink-0 hidden md:block">
+      <div className="p-4 border-b">
+        <h1 className="text-xl font-bold text-primary">Healthcare Portal</h1>
       </div>
-    </aside>
+      
+      <div className="py-4 px-3">
+        <p className="text-xs uppercase text-muted-foreground font-medium mb-2 px-3">
+          Main Menu
+        </p>
+        <nav className="space-y-1">
+          <SidebarLink
+            href={`/dashboard`}
+            icon={<LayoutDashboard className="h-5 w-5" />}
+            active={isActive('/dashboard')}
+          >
+            Dashboard
+          </SidebarLink>
+
+          {role === 'patient' && (
+            <>
+              <SidebarLink
+                href="/patient/parameters"
+                icon={<Heart className="h-5 w-5" />}
+                active={isActive('/patient/parameters')}
+              >
+                My Health
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/patient/appointments"
+                icon={<Calendar className="h-5 w-5" />}
+                active={isActive('/patient/appointments')}
+              >
+                Appointments
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/patient/medical-records"
+                icon={<FileText className="h-5 w-5" />}
+                active={isActive('/patient/medical-records')}
+              >
+                Medical Records
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/patient/medications"
+                icon={<Pill className="h-5 w-5" />}
+                active={isActive('/patient/medications')}
+              >
+                Medications
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/patient/reminders"
+                icon={<Bell className="h-5 w-5" />}
+                active={isActive('/patient/reminders')}
+              >
+                Reminders
+              </SidebarLink>
+            </>
+          )}
+
+          {role === 'doctor' && (
+            <>
+              <SidebarLink
+                href="/doctor/patients"
+                icon={<Users className="h-5 w-5" />}
+                active={isActive('/doctor/patients')}
+              >
+                Patients
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/doctor/appointments"
+                icon={<Calendar className="h-5 w-5" />}
+                active={isActive('/doctor/appointments')}
+              >
+                Appointments
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/doctor/medical-records"
+                icon={<FileText className="h-5 w-5" />}
+                active={isActive('/doctor/medical-records')}
+              >
+                Medical Records
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/doctor/prescriptions"
+                icon={<Pill className="h-5 w-5" />}
+                active={isActive('/doctor/prescriptions')}
+              >
+                Prescriptions
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/doctor/analytics"
+                icon={<PieChart className="h-5 w-5" />}
+                active={isActive('/doctor/analytics')}
+              >
+                Analytics
+              </SidebarLink>
+            </>
+          )}
+
+          {role === 'hospital' && (
+            <>
+              <SidebarLink
+                href="/hospital/doctors"
+                icon={<User className="h-5 w-5" />}
+                active={isActive('/hospital/doctors')}
+              >
+                Doctors
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/hospital/patients"
+                icon={<Users className="h-5 w-5" />}
+                active={isActive('/hospital/patients')}
+              >
+                Patients
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/hospital/departments"
+                icon={<Building2 className="h-5 w-5" />}
+                active={isActive('/hospital/departments')}
+              >
+                Departments
+              </SidebarLink>
+              
+              <SidebarLink
+                href="/hospital/analytics"
+                icon={<PieChart className="h-5 w-5" />}
+                active={isActive('/hospital/analytics')}
+              >
+                Analytics
+              </SidebarLink>
+            </>
+          )}
+
+          {/* Common links for all roles */}
+          <SidebarLink
+            href="/messages"
+            icon={<MessageSquare className="h-5 w-5" />}
+            active={isActive('/messages')}
+          >
+            Messages
+          </SidebarLink>
+          
+          <SidebarLink
+            href="/settings"
+            icon={<Settings className="h-5 w-5" />}
+            active={isActive('/settings')}
+          >
+            Settings
+          </SidebarLink>
+          
+          <SidebarLink
+            href="/help"
+            icon={<HelpCircle className="h-5 w-5" />}
+            active={isActive('/help')}
+          >
+            Help & Support
+          </SidebarLink>
+        </nav>
+      </div>
+    </div>
   );
 }
