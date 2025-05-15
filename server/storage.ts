@@ -1670,5 +1670,52 @@ export const setupMockData = async (storage: IStorage) => {
     category: "medication"
   });
 
+  // Create mock messages for inbox/outbox demonstration
+  // Message 1: Doctor to Patient
+  const doctorToPatientMsg = await storage.createMessage({
+    senderId: doctorUser.id,
+    recipientId: patientUser.id,
+    subject: "Your Recent Lab Results",
+    content: "Hello, I've reviewed your recent lab results and everything looks good. Keep up with your current treatment plan and let me know if you have any questions.",
+    status: "unread",
+  });
+
+  // Message 2: Patient to Doctor
+  const patientToDoctorMsg = await storage.createMessage({
+    senderId: patientUser.id,
+    recipientId: doctorUser.id,
+    subject: "Question about medication",
+    content: "Hi Dr. Smith, I've been experiencing mild dizziness after taking the new medication. Should I be concerned?",
+    status: "unread",
+  });
+
+  // Message 3: Doctor to Patient - Response in thread
+  await storage.createMessage({
+    senderId: doctorUser.id,
+    recipientId: patientUser.id,
+    subject: "Re: Question about medication",
+    content: "Thank you for letting me know. Dizziness can be a side effect, but if it's persistent or severe, we might need to adjust your dosage. Try taking the medication with food and make sure you're staying hydrated. Let's monitor this for a few more days.",
+    status: "unread",
+    parentId: patientToDoctorMsg.id
+  });
+
+  // Message 4: Hospital to Doctor
+  await storage.createMessage({
+    senderId: hospitalUser.id,
+    recipientId: doctorUser.id,
+    subject: "Department Meeting Schedule",
+    content: "Dear Dr. Smith, this is a reminder about the upcoming department meeting on Friday at 2 PM. Please confirm your attendance.",
+    status: "unread",
+  });
+
+  // Message 5: Hospital to Patient
+  await storage.createMessage({
+    senderId: hospitalUser.id,
+    recipientId: patientUser.id,
+    subject: "Upcoming Appointment Reminder",
+    content: "This is a friendly reminder about your upcoming appointment at General Hospital on " + new Date(Date.now() + 86400000 * 3).toLocaleDateString() + ". Please arrive 15 minutes early to complete any necessary paperwork.",
+    status: "unread",
+  });
+
   console.log("Mock data setup completed successfully");
 };

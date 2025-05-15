@@ -13,7 +13,8 @@ import {
   insertPrescriptionSchema,
   insertParameterSchema,
   insertAppointmentSchema,
-  insertReminderSchema
+  insertReminderSchema,
+  insertMessageSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -862,6 +863,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(reminder);
     } catch (error) {
       res.status(500).json({ message: "Failed to complete reminder" });
+    }
+  });
+  
+  // Message endpoints
+  // Get inbox messages
+  app.get("/api/messages/inbox", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const { tab = "unread", page = 1, search = "" } = req.query;
+      
+      const messages = await storage.getUserMessages(
+        req.session.userId,
+        tab as string,
+        parseInt(page as string),
+        search as string
+      );
+      
+      res.status(200).json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch inbox messages" });
+    }
+  });
+  
+  // Get sent messages
+  app.get("/api/messages/sent", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const { page = 1, search = "" } = req.query;
+      
+      const messages = await storage.getUserSentMessages(
+        req.session.userId,
+        parseInt(page as string),
+        search as string
+      );
+      
+      res.status(200).json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sent messages" });
+    }
+  });
+  
+  // Get message thread
+  app.get("/api/messages/thread/:id", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ message: "Invalid message ID" });
+      }
+      
+      // Check if the user has access to this message
+      const message = await storage.getMessage(messageId);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Only allow access if the user is either the sender or recipient
+      if (message.senderId !== req.session.userId && message.recipientId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const thread = await storage.getMessageThread(messageId);
+      res.status(200).json(thread);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch message thread" });
+    }
+  });
+  
+  // Create new message
+  app.post("/api/messages", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const data = insertMessageSchema.parse({
+        ...req.body,
+        senderId: req.session.userId,
+        status: "unread" // Always set status to unread for new messages
+      });
+      
+      // Check if recipient exists
+      const recipient = await storage.getUser(data.recipientId);
+      if (!recipient) {
+        return res.status(400).json({ message: "Recipient not found" });
+      }
+      
+      const message = await storage.createMessage(data);
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+  
+  // Update message status (mark as read, archive, etc.)
+  app.patch("/api/messages/:id/status", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ message: "Invalid message ID" });
+      }
+      
+      const { status } = req.body;
+      if (!status || !["unread", "read", "archived"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      // Check if the user has access to this message
+      const message = await storage.getMessage(messageId);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Only allow recipient to update status
+      if (message.recipientId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedMessage = await storage.updateMessageStatus(messageId, status);
+      res.status(200).json(updatedMessage);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update message status" });
     }
   });
   
