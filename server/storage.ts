@@ -1310,6 +1310,17 @@ export const setupMockData = async (storage: IStorage) => {
     municipality: "New York"
   });
   
+  const hospitalUser = await storage.createUser({
+    email: "hospital@example.com",
+    password: "password123",
+    firstName: "General",
+    lastName: "Hospital",
+    role: "hospital",
+    phone: "212-555-1000",
+    address: "123 Main Street, New York, NY 10001",
+    municipality: "New York"
+  });
+  
   // Create sample hospitals
   const generalHospital = await storage.createHospital({
     name: "General Hospital",
@@ -1322,7 +1333,8 @@ export const setupMockData = async (storage: IStorage) => {
     website: "https://www.generalhospital.org",
     capacity: 500,
     departments: ["Emergency", "Cardiology", "Neurology", "Pediatrics", "Oncology", "Surgery", "Internal Medicine"],
-    services: ["Emergency Care", "Medical Imaging", "Laboratory Services", "Rehabilitation", "Mental Health"]
+    services: ["Emergency Care", "Medical Imaging", "Laboratory Services", "Rehabilitation", "Mental Health"],
+    adminId: hospitalUser.id
   });
   
   const specialtyClinic = await storage.createHospital({
