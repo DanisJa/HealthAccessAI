@@ -3,14 +3,34 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RegisterInput, registerSchema } from "@shared/schema";
 import { Loader2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Register() {
   const [_, navigate] = useLocation();
@@ -43,7 +63,10 @@ export default function Register() {
       console.error(error);
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "Please check your information and try again",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please check your information and try again",
         variant: "destructive",
       });
     } finally {
@@ -56,10 +79,11 @@ export default function Register() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <span className="material-icons text-primary text-3xl mr-2">favorite</span>
-            <h1 className="text-2xl font-bold text-primary font-heading">HealthIoT</h1>
+            <img src="../../../public/logo.png" className="w-40 h-40" />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Create an Account
+          </CardTitle>
           <CardDescription className="text-center">
             Enter your information to create your account
           </CardDescription>
@@ -126,7 +150,9 @@ export default function Register() {
                       <SelectContent>
                         <SelectItem value="patient">Patient</SelectItem>
                         <SelectItem value="doctor">Doctor</SelectItem>
-                        <SelectItem value="hospital">Hospital Administrator</SelectItem>
+                        <SelectItem value="hospital">
+                          Hospital Administrator
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -140,7 +166,11 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +183,11 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -175,7 +209,11 @@ export default function Register() {
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
             Already have an account?{" "}
-            <Button variant="link" className="p-0" onClick={() => navigate("/login")}>
+            <Button
+              variant="link"
+              className="p-0"
+              onClick={() => navigate("/login")}
+            >
               Sign in
             </Button>
           </div>

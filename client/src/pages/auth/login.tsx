@@ -4,8 +4,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -20,15 +34,15 @@ export default function Login() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && typeof user === 'object' && 'role' in user) {
-      switch(user.role) {
-        case 'doctor':
+    if (user && typeof user === "object" && "role" in user) {
+      switch (user.role) {
+        case "doctor":
           navigate("/doctor");
           break;
-        case 'patient':
+        case "patient":
           navigate("/patient");
           break;
-        case 'hospital':
+        case "hospital":
           navigate("/hospital");
           break;
         default:
@@ -53,17 +67,17 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back!",
       });
-      
+
       // Redirect based on user role
-      if (userData && typeof userData === 'object' && 'role' in userData) {
-        switch(userData.role) {
-          case 'doctor':
+      if (userData && typeof userData === "object" && "role" in userData) {
+        switch (userData.role) {
+          case "doctor":
             navigate("/doctor");
             break;
-          case 'patient':
+          case "patient":
             navigate("/patient");
             break;
-          case 'hospital':
+          case "hospital":
             navigate("/hospital");
             break;
           default:
@@ -76,7 +90,10 @@ export default function Login() {
       console.error(error);
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Please check your credentials and try again",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please check your credentials and try again",
         variant: "destructive",
       });
     } finally {
@@ -89,10 +106,11 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <span className="material-icons text-primary text-3xl mr-2">favorite</span>
-            <h1 className="text-2xl font-bold text-primary font-heading">HealthIoT</h1>
+            <img src="../../../public/logo.png" className="w-40 h-40" />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Sign In
+          </CardTitle>
           <CardDescription className="text-center">
             Enter your email and password to access your account
           </CardDescription>
@@ -120,7 +138,11 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -142,7 +164,11 @@ export default function Login() {
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
             Don't have an account?{" "}
-            <Button variant="link" className="p-0" onClick={() => navigate("/register")}>
+            <Button
+              variant="link"
+              className="p-0"
+              onClick={() => navigate("/register")}
+            >
               Sign up
             </Button>
           </div>
