@@ -111,6 +111,13 @@ export const hospitals = pgTable("hospitals", {
   type: hospitalTypeEnum("type").notNull(),
   municipality: text("municipality").notNull(),
   location: text("location").notNull(), // Can store latitude,longitude or address
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  website: text("website"),
+  capacity: integer("capacity"), // Number of beds
+  departments: text("departments").array(), // List of departments
+  services: text("services").array(), // List of services provided
   createdAt: timestamp("created_at").defaultNow(),
 });
 

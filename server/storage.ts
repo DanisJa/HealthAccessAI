@@ -592,9 +592,14 @@ export class MemStorage implements IStorage {
       }));
   }
   
-  async getPatientAppointments(patientId: number, tab: string, date?: string): Promise<any[]> {
+  async getPatientAppointments(patientId: number, tab: string, date?: string, hospitalId?: number): Promise<any[]> {
     let appointments = Array.from(this.appointments.values())
       .filter(appointment => appointment.patientId === patientId);
+    
+    // Filter by hospital if specified
+    if (hospitalId) {
+      appointments = appointments.filter(a => a.hospitalId === hospitalId);
+    }
     
     // Filter by tab
     if (tab === 'upcoming') {
@@ -1130,14 +1135,43 @@ export const setupMockData = async (storage: IStorage) => {
     name: "General Hospital",
     type: "public",
     municipality: "New York",
-    location: "40.7128,-74.0060" // Latitude, longitude for New York
+    location: "40.7128,-74.0060", // Latitude, longitude for New York
+    address: "123 Main Street, New York, NY 10001",
+    phone: "212-555-1000",
+    email: "info@generalhospital.org",
+    website: "https://www.generalhospital.org",
+    capacity: 500,
+    departments: ["Emergency", "Cardiology", "Neurology", "Pediatrics", "Oncology", "Surgery", "Internal Medicine"],
+    services: ["Emergency Care", "Medical Imaging", "Laboratory Services", "Rehabilitation", "Mental Health"]
   });
   
   const specialtyClinic = await storage.createHospital({
     name: "Specialty Medical Center",
     type: "private",
     municipality: "New York",
-    location: "40.7306,-73.9352"
+    location: "40.7306,-73.9352",
+    address: "456 Park Avenue, New York, NY 10022",
+    phone: "212-555-2000",
+    email: "contact@specialtymedical.com",
+    website: "https://www.specialtymedical.com",
+    capacity: 200,
+    departments: ["Orthopedics", "Dermatology", "Ophthalmology", "ENT", "Urology"],
+    services: ["Specialized Surgery", "Diagnostic Services", "Telemedicine", "Physical Therapy", "Day Procedures"]
+  });
+  
+  // Create a third hospital
+  const communityHealth = await storage.createHospital({
+    name: "Community Health Center",
+    type: "public",
+    municipality: "Brooklyn",
+    location: "40.6782,-73.9442",
+    address: "789 Community Blvd, Brooklyn, NY 11201",
+    phone: "718-555-3000",
+    email: "help@communityhealthcenter.org",
+    website: "https://www.communityhealthcenter.org",
+    capacity: 150,
+    departments: ["Family Medicine", "Pediatrics", "OB/GYN", "Mental Health", "Community Care"],
+    services: ["Preventive Care", "Wellness Programs", "Vaccinations", "Health Education", "Social Services"]
   });
   
   // Associate doctor with hospitals
@@ -1153,9 +1187,20 @@ export const setupMockData = async (storage: IStorage) => {
     assignedBy: null
   });
   
-  // Associate patient with hospital
+  await storage.addDoctorToHospital({
+    hospitalId: communityHealth.id,
+    doctorId: doctorUser.id,
+    assignedBy: null
+  });
+  
+  // Associate patient with hospitals
   await storage.addPatientToHospital({
     hospitalId: generalHospital.id,
+    patientId: patientUser.id
+  });
+  
+  await storage.addPatientToHospital({
+    hospitalId: communityHealth.id,
     patientId: patientUser.id
   });
 
