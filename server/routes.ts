@@ -50,38 +50,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: error.message });
     }
 
+    console.log("Login data:", data);
+
     res.status(201).json(data);
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.session?.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to log out" });
-      }
-      res.clearCookie("connect.sid");
+  app.post("/api/auth/logout", async (req, res) => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    req.session.destroy(() => {
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/auth/me", async (req, res) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
     }
 
-    try {
-      const user = await storage.getUser(req.session.userId);
-      if (!user) {
-        req.session.destroy(() => { });
-        return res.status(401).json({ message: "User not found" });
-      }
+    const { data: user } = await supabase.from('users').select('*').eq('id', data.user.id).single();
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
+    return res.status(200).json(user);
 
-      res.status(200).json(userWithoutPassword);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to get user information" });
-    }
   });
 
   // Doctor Routes
