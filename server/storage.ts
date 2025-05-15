@@ -569,12 +569,16 @@ export class MemStorage implements IStorage {
     if (tab === 'upcoming') {
       appointments = appointments.filter(a => 
         new Date(a.date).getTime() >= new Date().getTime() && 
-        a.status === 'scheduled'
+        (a.status === 'pending' || a.status === 'approved')
       );
     } else if (tab === 'completed') {
       appointments = appointments.filter(a => a.status === 'completed');
     } else if (tab === 'cancelled') {
       appointments = appointments.filter(a => a.status === 'cancelled');
+    } else if (tab === 'pending') {
+      appointments = appointments.filter(a => a.status === 'pending');
+    } else if (tab === 'rejected') {
+      appointments = appointments.filter(a => a.status === 'rejected');
     }
     
     // Filter by date if provided
@@ -593,30 +597,64 @@ export class MemStorage implements IStorage {
     // Sort by date
     appointments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    // Enrich with doctor information
-    return appointments.map(appointment => {
+    // Fetch and prepare related data for each appointment
+    return Promise.all(appointments.map(async appointment => {
       const doctor = this.users.get(appointment.doctorId);
+      const hospital = await this.getHospital(appointment.hospitalId);
       
       return {
         ...appointment,
         doctor: doctor ? {
           id: doctor.id,
           firstName: doctor.firstName,
-          lastName: doctor.lastName
+          lastName: doctor.lastName,
+          specialty: doctor.specialty
+        } : undefined,
+        hospital: hospital ? {
+          id: hospital.id,
+          name: hospital.name,
+          type: hospital.type,
+          municipality: hospital.municipality
         } : undefined
       };
-    });
+    }));
   }
   
   async createAppointment(insertAppointment: InsertAppointment): Promise<Appointment> {
     const id = this.currentAppointmentId++;
     const createdAt = new Date();
+    
+    // Validate hospital exists
+    const hospital = await this.getHospital(insertAppointment.hospitalId);
+    if (!hospital) {
+      throw new Error('Hospital not found');
+    }
+    
+    // Validate doctor exists
+    const doctor = await this.getUser(insertAppointment.doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      throw new Error('Doctor not found or invalid');
+    }
+    
+    // Validate patient exists
+    const patient = await this.getUser(insertAppointment.patientId);
+    if (!patient || patient.role !== 'patient') {
+      throw new Error('Patient not found or invalid');
+    }
+    
+    // Check if doctor is associated with the hospital
+    const doctorHospitals = await this.getDoctorHospitals(insertAppointment.doctorId);
+    if (!doctorHospitals.some(h => h.id === insertAppointment.hospitalId)) {
+      throw new Error('Doctor is not associated with this hospital');
+    }
+    
     const appointment: Appointment = { 
       ...insertAppointment, 
       id, 
       createdAt,
-      status: 'scheduled' // Default status
+      status: insertAppointment.status || 'pending' // Default to pending if not specified
     };
+    
     this.appointments.set(id, appointment);
     return appointment;
   }
@@ -1135,21 +1173,45 @@ export const setupMockData = async (storage: IStorage) => {
   await storage.createAppointment({
     patientId: patientUser.id,
     doctorId: doctorUser.id,
+    hospitalId: generalHospital.id,
     date: tomorrow.toISOString(),
     duration: 30,
     title: "Regular Checkup",
-    status: "scheduled",
-    type: "In-person"
+    status: "approved",
+    type: "In-person",
+    description: "Annual physical examination",
+    createdBy: patientUser.id
   });
 
   await storage.createAppointment({
     patientId: patientUser.id,
     doctorId: doctorUser.id,
+    hospitalId: specialtyClinic.id,
     date: nextWeek.toISOString(),
     duration: 45,
     title: "Follow-up Consultation",
-    status: "scheduled",
-    type: "Video"
+    status: "pending",
+    type: "Video",
+    description: "Discussion of test results",
+    createdBy: doctorUser.id
+  });
+  
+  // Create a past appointment that's completed
+  const lastWeek = new Date();
+  lastWeek.setDate(lastWeek.getDate() - 7);
+  lastWeek.setHours(11, 0, 0, 0);
+  
+  await storage.createAppointment({
+    patientId: patientUser.id,
+    doctorId: doctorUser.id,
+    hospitalId: generalHospital.id,
+    date: lastWeek.toISOString(),
+    duration: 30,
+    title: "Initial Consultation",
+    status: "completed",
+    type: "In-person",
+    description: "First visit for symptoms assessment",
+    createdBy: patientUser.id
   });
 
   // Create medical report
