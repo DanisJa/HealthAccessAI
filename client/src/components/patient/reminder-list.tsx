@@ -47,7 +47,11 @@ export function ReminderList({ reminders }: ReminderListProps) {
     }
   };
 
-  const getReminderIcon = (type: string) => {
+  const getReminderIcon = (type?: string) => {
+    if (!type) {
+      return <span className="material-icons">notifications</span>;
+    }
+    
     switch (type.toLowerCase()) {
       case 'medication':
         return <span className="material-icons">medication</span>;
