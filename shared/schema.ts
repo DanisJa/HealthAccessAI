@@ -10,7 +10,7 @@ export const hospitalTypeEnum = pgEnum('hospital_type', ['public', 'private']);
 
 // Users table
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   firstName: text("first_name").notNull(),
