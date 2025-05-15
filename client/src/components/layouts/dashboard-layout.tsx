@@ -41,6 +41,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/patient/records', label: 'Medical Records', icon: <ClipboardList className="h-5 w-5" /> },
         { href: '/patient/medications', label: 'Medications', icon: <Pill className="h-5 w-5" /> },
         { href: '/patient/reminders', label: 'Reminders', icon: <CalendarDays className="h-5 w-5" /> },
+        { href: '/messages', label: 'Messages', icon: <MessageSquare className="h-5 w-5" /> },
         { href: '/patient/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
       ];
     } else if (user.role === 'doctor') {
@@ -51,6 +52,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/doctor/medical-records', label: 'Medical Records', icon: <ClipboardList className="h-5 w-5" /> },
         { href: '/doctor/prescriptions', label: 'Prescriptions', icon: <Pill className="h-5 w-5" /> },
         { href: '/doctor/analytics', label: 'Analytics', icon: <Activity className="h-5 w-5" /> },
+        { href: '/messages', label: 'Messages', icon: <MessageSquare className="h-5 w-5" /> },
         { href: '/doctor/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
       ];
     } else if (user.role === 'hospital') {
@@ -60,6 +62,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { href: '/hospital/patients', label: 'Patients', icon: <Users className="h-5 w-5" /> },
         { href: '/hospital/appointments', label: 'Appointments', icon: <CalendarDays className="h-5 w-5" /> },
         { href: '/hospital/departments', label: 'Departments', icon: <Building2 className="h-5 w-5" /> },
+        { href: '/messages', label: 'Messages', icon: <MessageSquare className="h-5 w-5" /> },
         { href: '/hospital/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
       ];
     }
