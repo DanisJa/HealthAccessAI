@@ -14,7 +14,8 @@ import {
   Building2, 
   Stethoscope,
   Users,
-  LogOut 
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

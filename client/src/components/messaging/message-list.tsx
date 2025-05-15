@@ -1,37 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationEllipsis, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Input } from "@/components/ui/input";
-import { Search, Mail, MailOpen, Archive } from "lucide-react";
-import { format } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { Search, Mail, MailOpen } from "lucide-react";
 
 interface Message {
   id: number;
@@ -43,6 +27,13 @@ interface Message {
   parentId: number | null;
   createdAt: string;
   sender: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+  recipient: {
+    id: number;
     firstName: string;
     lastName: string;
     role: string;
@@ -54,174 +45,146 @@ interface MessageListProps {
 }
 
 export function MessageList({ type }: MessageListProps) {
-  const [page, setPage] = React.useState(1);
-  const [search, setSearch] = React.useState("");
-  const [tab, setTab] = React.useState(type === "inbox" ? "unread" : "all");
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { user } = useAuth();
+  const pageSize = 10;
   
-  const { data: messages = [], isLoading } = useQuery({
-    queryKey: [
-      type === "inbox" ? "/api/messages/inbox" : "/api/messages/sent", 
-      { tab, page, search }
-    ],
-    queryFn: async () => {
-      const url = new URL(
-        type === "inbox" ? "/api/messages/inbox" : "/api/messages/sent",
-        window.location.origin
-      );
-      
-      if (type === "inbox") {
-        url.searchParams.append("tab", tab);
-      }
-      
-      url.searchParams.append("page", page.toString());
-      url.searchParams.append("search", search);
-      
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error("Failed to fetch messages");
-      }
-      
-      return response.json();
-    }
+  const endpoint = type === "inbox" 
+    ? `/api/messages?tab=${type}&page=${page}&search=${searchTerm}`
+    : `/api/messages/sent?page=${page}&search=${searchTerm}`;
+    
+  const { data, isLoading, isError } = useQuery({
+    queryKey: [endpoint],
+    enabled: !!user,
   });
   
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Trigger query refetch by changing state
-    setPage(1); // Reset to first page on new search
-  };
+  const messages = data || [];
+  const totalPages = Math.ceil((data?.length || 0) / pageSize);
   
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "unread":
-        return <Mail className="h-4 w-4" />;
-      case "read":
-        return <MailOpen className="h-4 w-4" />;
-      case "archived":
-        return <Archive className="h-4 w-4" />;
-      default:
-        return <Mail className="h-4 w-4" />;
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(5)].map((_, index) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                </div>
+                <Skeleton className="h-4 w-[100px]" />
+              </div>
+              <Skeleton className="h-4 w-full mt-4" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+  
+  if (isError) {
+    return <div>Error loading messages</div>;
+  }
+  
+  if (messages.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No messages found</p>
+      </div>
+    );
+  }
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>
-          {type === "inbox" ? "Inbox" : "Sent Messages"}
-        </CardTitle>
-        <CardDescription>
-          {type === "inbox" 
-            ? "Messages you've received from doctors, hospitals, and staff." 
-            : "Messages you've sent to doctors, hospitals, and staff."}
-        </CardDescription>
-        
-        {type === "inbox" && (
-          <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="unread">Unread</TabsTrigger>
-              <TabsTrigger value="read">Read</TabsTrigger>
-              <TabsTrigger value="archived">Archived</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-        
-        <form onSubmit={handleSearch} className="flex w-full max-w-sm items-center space-x-2 mt-4">
-          <Input
-            type="search"
-            placeholder="Search messages..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button type="submit" size="icon">
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
-      </CardHeader>
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search messages..."
+          className="pl-8"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
       
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <p>Loading messages...</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No messages found</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[200px]">{type === "inbox" ? "From" : "To"}</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead className="w-[150px]">Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {messages.map((message: Message) => (
-                <TableRow key={message.id}>
-                  <TableCell>
-                    <Badge 
-                      variant={message.status === "unread" ? "default" : "outline"}
-                      className="flex items-center gap-1"
-                    >
-                      {getStatusIcon(message.status)}
-                      {message.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {type === "inbox" 
-                      ? `${message.sender.firstName} ${message.sender.lastName}`
-                      : `${message.sender.firstName} ${message.sender.lastName}`}
-                    <div className="text-xs text-muted-foreground">
-                      {message.sender.role}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Link href={`/messages/thread/${message.parentId || message.id}`} className="hover:underline">
-                      {message.subject}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(message.createdAt), "MMM d, yyyy")}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
+      {messages.map((message: Message) => (
+        <Link key={message.id} href={`/messages/thread/${message.id}`}>
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">
+                      {type === "inbox" 
+                        ? `${message.sender.firstName} ${message.sender.lastName}`
+                        : `${message.recipient.firstName} ${message.recipient.lastName}`
+                      }
+                    </h3>
+                    {message.status === "unread" && type === "inbox" && (
+                      <Badge variant="default">New</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {message.subject}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {message.status === "unread" && type === "inbox" ? (
+                    <Mail className="h-4 w-4" />
+                  ) : (
+                    <MailOpen className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(message.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm mt-2 line-clamp-1 text-muted-foreground">
+                {message.content}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
       
-      <CardFooter className="flex justify-between">
-        <div>
-          {messages.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Showing {messages.length} {messages.length === 1 ? "message" : "messages"}
-            </p>
-          )}
-        </div>
-        
+      {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                disabled={page <= 1} 
-              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                disabled={page === 1}
+              >
+                <PaginationPrevious className="h-4 w-4" />
+              </Button>
             </PaginationItem>
+            
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  isActive={page === i + 1}
+                  onClick={() => setPage(i + 1)}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
             <PaginationItem>
-              <PaginationLink isActive>{page}</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => setPage(prev => prev + 1)}
-                disabled={messages.length < 10} // Assuming page size is 10
-              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                disabled={page === totalPages}
+              >
+                <PaginationNext className="h-4 w-4" />
+              </Button>
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      </CardFooter>
-    </Card>
+      )}
+    </div>
   );
 }

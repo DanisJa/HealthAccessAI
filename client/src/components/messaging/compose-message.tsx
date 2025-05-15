@@ -1,12 +1,14 @@
 import React, { useState } from "react";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -28,24 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Send } from "lucide-react";
 
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  role: "doctor" | "patient" | "hospital";
-}
-
-// Form schema for composing a message
 const messageFormSchema = z.object({
-  recipientId: z.string().min(1, "Recipient is required"),
-  subject: z.string().min(1, "Subject is required").max(100, "Subject is too long"),
+  recipientId: z.coerce.number({
+    required_error: "Please select a recipient",
+  }),
+  subject: z.string().min(1, "Subject is required"),
   content: z.string().min(1, "Message content is required"),
 });
 
@@ -53,76 +44,46 @@ type MessageFormValues = z.infer<typeof messageFormSchema>;
 
 export function ComposeMessage() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [_, navigate] = useLocation();
   
-  // Determine which type of users to fetch based on current user's role
-  const recipientType = user?.role === "patient" ? "doctor" : 
-                        user?.role === "doctor" ? "patient" : 
-                        "all";
-  
-  // Query for potential recipients
-  const { data: recipients = [], isLoading: loadingRecipients } = useQuery({
-    queryKey: ["/api/users/list", { role: recipientType }],
-    queryFn: async () => {
-      // For simplicity in this example, we'll mock this until we implement the API
-      // In a real implementation, this would be fetched from the backend
-      let mockRecipients = [];
-      
-      if (recipientType === "doctor" || recipientType === "all") {
-        mockRecipients.push({
-          id: 1,
-          firstName: "John",
-          lastName: "Smith",
-          role: "doctor"
-        });
-      }
-      
-      if (recipientType === "patient" || recipientType === "all") {
-        mockRecipients.push({
-          id: 2,
-          firstName: "Jane",
-          lastName: "Doe",
-          role: "patient"
-        });
-      }
-      
-      if (recipientType === "all") {
-        mockRecipients.push({
-          id: 3,
-          firstName: "General",
-          lastName: "Hospital",
-          role: "hospital"
-        });
-      }
-      
-      return mockRecipients;
-    }
+  // Get available recipients based on user role
+  const { data: recipients, isLoading: isLoadingRecipients } = useQuery({
+    queryKey: [user?.role === "doctor" ? "/api/patients" : "/api/doctors"],
+    enabled: !!user,
   });
   
   const form = useForm<MessageFormValues>({
     resolver: zodResolver(messageFormSchema),
     defaultValues: {
-      recipientId: "",
       subject: "",
       content: "",
     },
   });
   
-  // Mutation to send a message
   const sendMessage = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/messages", data);
-      return response;
+    mutationFn: async (data: MessageFormValues) => {
+      return fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }).then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to send message");
+        }
+        return res.json();
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/sent"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
       toast({
         title: "Success",
         description: "Message sent successfully",
       });
-      setLocation("/messages");
+      navigate("/messages");
     },
     onError: () => {
       toast({
@@ -130,28 +91,20 @@ export function ComposeMessage() {
         description: "Failed to send message",
         variant: "destructive",
       });
-    }
+    },
   });
   
   const onSubmit = (values: MessageFormValues) => {
-    sendMessage.mutate({
-      recipientId: parseInt(values.recipientId),
-      subject: values.subject,
-      content: values.content,
-    });
+    sendMessage.mutate(values);
   };
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Compose Message</CardTitle>
-        <CardDescription>
-          Create a new message to communicate with your healthcare providers or patients.
-        </CardDescription>
-      </CardHeader>
-      
+    <Card>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardHeader>
+            <CardTitle>Compose New Message</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
@@ -159,20 +112,24 @@ export function ComposeMessage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Recipient</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={loadingRecipients}
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value?.toString()}
+                    disabled={isLoadingRecipients}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a recipient" />
+                        <SelectValue placeholder="Select recipient" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {recipients.map((recipient) => (
-                        <SelectItem key={recipient.id} value={recipient.id.toString()}>
-                          {recipient.firstName} {recipient.lastName} ({recipient.role})
+                      {recipients?.map((recipient: any) => (
+                        <SelectItem 
+                          key={recipient.id} 
+                          value={recipient.id.toString()}
+                        >
+                          {recipient.firstName} {recipient.lastName}
+                          {recipient.specialty && ` (${recipient.specialty})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -203,10 +160,10 @@ export function ComposeMessage() {
                 <FormItem>
                   <FormLabel>Message</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Type your message here..."
+                    <Textarea 
+                      placeholder="Type your message here..." 
                       className="min-h-[200px]"
-                      {...field}
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -214,22 +171,19 @@ export function ComposeMessage() {
               )}
             />
           </CardContent>
-          
-          <CardFooter className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setLocation("/messages")}
+          <CardFooter className="flex justify-end">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="mr-2"
+              onClick={() => navigate("/messages")}
             >
               Cancel
             </Button>
-            
             <Button 
-              type="submit" 
+              type="submit"
               disabled={sendMessage.isPending}
-              className="flex items-center"
             >
-              <Send className="h-4 w-4 mr-2" />
               {sendMessage.isPending ? "Sending..." : "Send Message"}
             </Button>
           </CardFooter>
