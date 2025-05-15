@@ -39,6 +39,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HospitalSelector } from "@/components/common/hospital-selector";
+import { useHospital } from "@/hooks/use-hospital";
 
 export default function PatientReminders() {
   const [search, setSearch] = useState("");
@@ -54,9 +56,30 @@ export default function PatientReminders() {
   const [frequency, setFrequency] = useState("");
   
   const { toast } = useToast();
+  const { selectedHospital } = useHospital();
+  
+  const hospitalId = selectedHospital?.id;
 
   const { data: reminders, isLoading } = useQuery({
-    queryKey: ['/api/patient/reminders', tab, page, search],
+    queryKey: ['/api/patient/reminders', tab, page, search, hospitalId],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        tab,
+        page: page.toString(),
+        search,
+        filtered: "true"
+      });
+      
+      if (hospitalId) {
+        params.append('hospitalId', hospitalId.toString());
+      }
+      
+      const response = await fetch(`/api/patient/reminders?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch reminders');
+      }
+      return response.json();
+    }
   });
 
   const createReminderMutation = useMutation({
@@ -137,6 +160,7 @@ export default function PatientReminders() {
       dueDate: dueDate.toISOString(),
       recurring: isRecurring,
       frequency: isRecurring ? frequency : null,
+      hospitalId: hospitalId || null,
     });
   };
 
@@ -182,10 +206,20 @@ export default function PatientReminders() {
     <PageContainer>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold font-heading">My Reminders</h1>
-          <Button onClick={() => setIsNewReminderOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Reminder
-          </Button>
+          <div>
+            <h1 className="text-2xl font-bold font-heading">My Reminders</h1>
+            {selectedHospital && (
+              <p className="text-sm text-muted-foreground">
+                Filtered by {selectedHospital.name}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <HospitalSelector />
+            <Button onClick={() => setIsNewReminderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> New Reminder
+            </Button>
+          </div>
         </div>
 
         <Card>
