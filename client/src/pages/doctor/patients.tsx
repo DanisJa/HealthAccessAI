@@ -1,30 +1,36 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MoreVertical, Search, User, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function DoctorPatients() {
   const [search, setSearch] = useState("");
@@ -32,7 +38,7 @@ export default function DoctorPatients() {
   const [tab, setTab] = useState("all");
 
   const { data: patients, isLoading } = useQuery({
-    queryKey: ['/api/doctor/patients', tab, page, search],
+    queryKey: ["/api/doctor/patients", tab, page, search],
   });
 
   const totalPages = 5; // This should come from API
@@ -57,7 +63,7 @@ export default function DoctorPatients() {
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold font-heading">Patients</h1>
@@ -98,15 +104,17 @@ export default function DoctorPatients() {
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[250px]" />
-                          <Skeleton className="h-4 w-[200px]" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <Table>
@@ -128,7 +136,10 @@ export default function DoctorPatients() {
                                 <Avatar>
                                   <AvatarImage src={patient.avatarUrl} />
                                   <AvatarFallback>
-                                    {getInitials(patient.firstName, patient.lastName)}
+                                    {getInitials(
+                                      patient.firstName,
+                                      patient.lastName
+                                    )}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -137,7 +148,9 @@ export default function DoctorPatients() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>{getStatusBadge(patient.status)}</TableCell>
+                            <TableCell>
+                              {getStatusBadge(patient.status)}
+                            </TableCell>
                             <TableCell>{patient.lastVisit}</TableCell>
                             <TableCell>{patient.email}</TableCell>
                             <TableCell>
@@ -148,10 +161,18 @@ export default function DoctorPatients() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Profile</DropdownMenuItem>
-                                  <DropdownMenuItem>Medical Records</DropdownMenuItem>
-                                  <DropdownMenuItem>Schedule Appointment</DropdownMenuItem>
-                                  <DropdownMenuItem>Send Message</DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    View Profile
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Medical Records
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Schedule Appointment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Send Message
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
@@ -172,21 +193,27 @@ export default function DoctorPatients() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage(Math.max(1, page - 1))} />
+                    <PaginationPrevious
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    />
                   </PaginationItem>
-                  {Array.from({length: totalPages}, (_, i) => i + 1).map(pageNum => (
-                    <PaginationItem key={pageNum}>
-                      <Button
-                        variant={pageNum === page ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <Button
+                          variant={pageNum === page ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage(Math.min(totalPages, page + 1))} />
+                    <PaginationNext
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -196,6 +223,6 @@ export default function DoctorPatients() {
       </div>
 
       <ChatWidget role="doctor" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }

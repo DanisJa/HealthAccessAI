@@ -3,15 +3,15 @@ import { Link, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { MessageThread } from "@/components/messaging/message-thread";
 import { ArrowLeft } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function MessageThreadPage() {
   const params = useParams();
   const messageId = parseInt(params.id, 10);
-  
+
   if (isNaN(messageId)) {
     return (
-      <PageContainer>
+      <DashboardLayout>
         <div className="text-center">
           <h1 className="text-2xl font-bold">Invalid Message ID</h1>
           <p className="text-muted-foreground mt-2">
@@ -21,12 +21,12 @@ export default function MessageThreadPage() {
             <Button className="mt-4">Go back to messages</Button>
           </Link>
         </div>
-      </PageContainer>
+      </DashboardLayout>
     );
   }
-  
+
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Link href="/messages">
@@ -39,9 +39,9 @@ export default function MessageThreadPage() {
             <p className="text-muted-foreground">View and reply to messages</p>
           </div>
         </div>
-        
+
         <MessageThread messageId={messageId} />
       </div>
-    </PageContainer>
+    </DashboardLayout>
   );
 }

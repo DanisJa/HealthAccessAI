@@ -1,25 +1,37 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from "@/components/ui/table";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, RefreshCw, FileText, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function PatientMedicalRecords() {
   const [search, setSearch] = useState("");
@@ -29,7 +41,7 @@ export default function PatientMedicalRecords() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const { data: medicalRecords, isLoading } = useQuery({
-    queryKey: ['/api/patient/medical-records', tab, page, search],
+    queryKey: ["/api/patient/medical-records", tab, page, search],
   });
 
   const totalPages = 3; // This should come from API
@@ -44,10 +56,12 @@ export default function PatientMedicalRecords() {
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold font-heading">My Medical Records</h1>
+          <h1 className="text-2xl font-bold font-heading">
+            My Medical Records
+          </h1>
         </div>
 
         <Card>
@@ -82,15 +96,17 @@ export default function PatientMedicalRecords() {
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[250px]" />
-                          <Skeleton className="h-4 w-[200px]" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <Table>
@@ -112,23 +128,43 @@ export default function PatientMedicalRecords() {
                                 <Avatar>
                                   <AvatarImage src={record.doctor.avatarUrl} />
                                   <AvatarFallback>
-                                    {getInitials(record.doctor.firstName, record.doctor.lastName)}
+                                    {getInitials(
+                                      record.doctor.firstName,
+                                      record.doctor.lastName
+                                    )}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium">Dr. {`${record.doctor.firstName} ${record.doctor.lastName}`}</p>
+                                  <p className="font-medium">
+                                    Dr.{" "}
+                                    {`${record.doctor.firstName} ${record.doctor.lastName}`}
+                                  </p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={record.type === 'report' ? 'default' : 'outline'}>
-                                {record.type === 'report' ? 'Medical Report' : 'Medical Order'}
+                              <Badge
+                                variant={
+                                  record.type === "report"
+                                    ? "default"
+                                    : "outline"
+                                }
+                              >
+                                {record.type === "report"
+                                  ? "Medical Report"
+                                  : "Medical Order"}
                               </Badge>
                             </TableCell>
                             <TableCell>{record.title}</TableCell>
-                            <TableCell>{new Date(record.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => viewRecord(record)}>
+                              {new Date(record.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => viewRecord(record)}
+                              >
                                 <Eye className="h-4 w-4 mr-1" /> View
                               </Button>
                             </TableCell>
@@ -149,21 +185,27 @@ export default function PatientMedicalRecords() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage(Math.max(1, page - 1))} />
+                    <PaginationPrevious
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    />
                   </PaginationItem>
-                  {Array.from({length: totalPages}, (_, i) => i + 1).map(pageNum => (
-                    <PaginationItem key={pageNum}>
-                      <Button 
-                        variant={pageNum === page ? "default" : "outline"} 
-                        size="icon"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <Button
+                          variant={pageNum === page ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage(Math.min(totalPages, page + 1))} />
+                    <PaginationNext
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -180,40 +222,50 @@ export default function PatientMedicalRecords() {
               <DialogTitle>
                 {selectedRecord.title}
                 <span className="inline-block ml-2">
-                  <Badge variant={selectedRecord.type === 'report' ? 'default' : 'outline'}>
-                    {selectedRecord.type === 'report' ? 'Medical Report' : 'Medical Order'}
+                  <Badge
+                    variant={
+                      selectedRecord.type === "report" ? "default" : "outline"
+                    }
+                  >
+                    {selectedRecord.type === "report"
+                      ? "Medical Report"
+                      : "Medical Order"}
                   </Badge>
                 </span>
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="py-4">
               <div className="flex items-center space-x-3 mb-6">
                 <Avatar>
                   <AvatarImage src={selectedRecord.doctor.avatarUrl} />
                   <AvatarFallback>
-                    {getInitials(selectedRecord.doctor.firstName, selectedRecord.doctor.lastName)}
+                    {getInitials(
+                      selectedRecord.doctor.firstName,
+                      selectedRecord.doctor.lastName
+                    )}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">Dr. {`${selectedRecord.doctor.firstName} ${selectedRecord.doctor.lastName}`}</p>
+                  <p className="font-medium">
+                    Dr.{" "}
+                    {`${selectedRecord.doctor.firstName} ${selectedRecord.doctor.lastName}`}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {new Date(selectedRecord.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-              
+
               <div className="border-t border-b py-4 my-4">
                 <div className="prose max-w-none">
                   <p>{selectedRecord.content}</p>
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
-              <Button onClick={() => setIsViewDialogOpen(false)}>
-                Close
-              </Button>
+              <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
               <Button variant="outline">
                 <FileText className="mr-2 h-4 w-4" />
                 Download PDF
@@ -224,6 +276,6 @@ export default function PatientMedicalRecords() {
       )}
 
       <ChatWidget role="patient" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }

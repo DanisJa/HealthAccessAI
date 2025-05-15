@@ -3,11 +3,11 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ComposeMessage } from "@/components/messaging/compose-message";
 import { ArrowLeft } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function ComposeMessagePage() {
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Link href="/messages">
@@ -22,9 +22,9 @@ export default function ComposeMessagePage() {
             </p>
           </div>
         </div>
-        
+
         <ComposeMessage />
       </div>
-    </PageContainer>
+    </DashboardLayout>
   );
 }

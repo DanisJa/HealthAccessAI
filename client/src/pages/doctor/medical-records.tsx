@@ -1,47 +1,53 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FileText, MoreVertical, Plus, Search, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function DoctorMedicalRecords() {
   const [search, setSearch] = useState("");
@@ -51,11 +57,11 @@ export default function DoctorMedicalRecords() {
   const [selectedPatient, setSelectedPatient] = useState("");
 
   const { data: medicalRecords, isLoading } = useQuery({
-    queryKey: ['/api/doctor/medical-records', tab, page, search],
+    queryKey: ["/api/doctor/medical-records", tab, page, search],
   });
 
   const { data: patients } = useQuery({
-    queryKey: ['/api/doctor/patients/all'],
+    queryKey: ["/api/doctor/patients/all"],
   });
 
   const totalPages = 5; // This should come from API
@@ -65,7 +71,7 @@ export default function DoctorMedicalRecords() {
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold font-heading">Medical Records</h1>
@@ -106,15 +112,17 @@ export default function DoctorMedicalRecords() {
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[250px]" />
-                          <Skeleton className="h-4 w-[200px]" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <Table>
@@ -136,7 +144,10 @@ export default function DoctorMedicalRecords() {
                                 <Avatar>
                                   <AvatarImage src={record.patient.avatarUrl} />
                                   <AvatarFallback>
-                                    {getInitials(record.patient.firstName, record.patient.lastName)}
+                                    {getInitials(
+                                      record.patient.firstName,
+                                      record.patient.lastName
+                                    )}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -145,12 +156,22 @@ export default function DoctorMedicalRecords() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={record.type === 'report' ? 'default' : 'outline'}>
-                                {record.type === 'report' ? 'Medical Report' : 'Medical Order'}
+                              <Badge
+                                variant={
+                                  record.type === "report"
+                                    ? "default"
+                                    : "outline"
+                                }
+                              >
+                                {record.type === "report"
+                                  ? "Medical Report"
+                                  : "Medical Order"}
                               </Badge>
                             </TableCell>
                             <TableCell>{record.title}</TableCell>
-                            <TableCell>{new Date(record.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              {new Date(record.createdAt).toLocaleDateString()}
+                            </TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -159,7 +180,9 @@ export default function DoctorMedicalRecords() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Details</DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    View Details
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem>Edit</DropdownMenuItem>
                                   <DropdownMenuItem>Print</DropdownMenuItem>
                                   <DropdownMenuItem>Share</DropdownMenuItem>
@@ -183,21 +206,27 @@ export default function DoctorMedicalRecords() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage(Math.max(1, page - 1))} />
+                    <PaginationPrevious
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    />
                   </PaginationItem>
-                  {Array.from({length: totalPages}, (_, i) => i + 1).map(pageNum => (
-                    <PaginationItem key={pageNum}>
-                      <Button 
-                        variant={pageNum === page ? "default" : "outline"} 
-                        size="icon"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <Button
+                          variant={pageNum === page ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage(Math.min(totalPages, page + 1))} />
+                    <PaginationNext
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -215,7 +244,7 @@ export default function DoctorMedicalRecords() {
               Create a new medical report for a patient.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="patient">Patient</Label>
@@ -227,30 +256,31 @@ export default function DoctorMedicalRecords() {
                   <SelectValue placeholder="Select patient" />
                 </SelectTrigger>
                 <SelectContent>
-                  {patients && patients.map((patient: any) => (
-                    <SelectItem key={patient.id} value={String(patient.id)}>
-                      {`${patient.firstName} ${patient.lastName}`}
-                    </SelectItem>
-                  ))}
+                  {patients &&
+                    patients.map((patient: any) => (
+                      <SelectItem key={patient.id} value={String(patient.id)}>
+                        {`${patient.firstName} ${patient.lastName}`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="title">Report Title</Label>
               <Input id="title" placeholder="Enter report title" />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="content">Report Content</Label>
-              <Textarea 
+              <Textarea
                 id="content"
                 placeholder="Enter detailed report"
                 className="min-h-[200px]"
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewReportOpen(false)}>
               Cancel
@@ -264,6 +294,6 @@ export default function DoctorMedicalRecords() {
       </Dialog>
 
       <ChatWidget role="doctor" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }
