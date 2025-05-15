@@ -22,7 +22,7 @@ export default function HospitalDashboard() {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      const response = await fetch(`/api/hospital/${user.id}`);
+      const response = await fetch(`/api/hospitals/${user.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch hospital details');
       }
@@ -40,6 +40,21 @@ export default function HospitalDashboard() {
       const response = await fetch(`/api/hospital/doctors`);
       if (!response.ok) {
         throw new Error('Failed to fetch hospital doctors');
+      }
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+  
+  // Fetch hospital patients
+  const patientsQuery = useQuery({
+    queryKey: ['hospital-patients', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const response = await fetch(`/api/hospital/patients`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch hospital patients');
       }
       return response.json();
     },
@@ -66,9 +81,11 @@ export default function HospitalDashboard() {
   ];
   
   // Stats for the dashboard
+  const patients = patientsQuery.data || [];
+  
   const stats = {
     totalDoctors: doctors.length,
-    totalPatients: 0,
+    totalPatients: patients.length,
     pendingInvitations: doctors.filter((d: any) => d.status === "pending").length,
     departments: hospitalData.departments?.length || 5
   };
