@@ -58,7 +58,7 @@ export function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
-              {user ? (
+              {user && typeof user === 'object' && 'firstName' in user ? (
                 <div>
                   <p className="font-medium">{`${user.firstName} ${user.lastName}`}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
