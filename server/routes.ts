@@ -239,7 +239,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const appointments = await storage.getDoctorTodayAppointments(user.id);
+      const { hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const appointments = await storage.getDoctorTodayAppointments(user.id, hospitalIdParam);
       res.status(200).json(appointments);
     } catch (error) {
       res.status(500).json({ message: "Failed to get today's appointments" });

@@ -288,19 +288,27 @@ export class MemStorage implements IStorage {
     return filteredPatients.slice(startIndex, endIndex);
   }
   
-  async getDoctorTodayAppointments(doctorId: number): Promise<any[]> {
+  async getDoctorTodayAppointments(doctorId: number, hospitalId?: number): Promise<any[]> {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
     
-    const todayAppointments = Array.from(this.appointments.values())
+    let todayAppointments = Array.from(this.appointments.values())
       .filter(appointment => 
         appointment.doctorId === doctorId && 
         new Date(appointment.date) >= todayStart && 
         new Date(appointment.date) <= todayEnd
-      )
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      );
+    
+    // Filter by hospital if specified
+    if (hospitalId) {
+      todayAppointments = todayAppointments.filter(a => a.hospitalId === hospitalId);
+    }
+    
+    // Sort by time
+    todayAppointments = todayAppointments.sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime());
     
     // Fetch and prepare related data for each appointment
     return Promise.all(todayAppointments.map(async appointment => {
@@ -327,9 +335,14 @@ export class MemStorage implements IStorage {
     }));
   }
   
-  async getDoctorAppointments(doctorId: number, tab: string, date?: string): Promise<any[]> {
+  async getDoctorAppointments(doctorId: number, tab: string, date?: string, hospitalId?: number): Promise<any[]> {
     let appointments = Array.from(this.appointments.values())
       .filter(appointment => appointment.doctorId === doctorId);
+    
+    // Filter by hospital if specified
+    if (hospitalId) {
+      appointments = appointments.filter(a => a.hospitalId === hospitalId);
+    }
     
     // Filter by tab
     if (tab === 'upcoming') {
