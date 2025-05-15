@@ -1,26 +1,67 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PlusCircle, MoreVertical, Search, RefreshCw, CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  PlusCircle,
+  MoreVertical,
+  Search,
+  RefreshCw,
+  CalendarIcon,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function DoctorPrescriptions() {
   const [search, setSearch] = useState("");
@@ -32,11 +73,11 @@ export default function DoctorPrescriptions() {
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   const { data: prescriptions, isLoading } = useQuery({
-    queryKey: ['/api/doctor/prescriptions', tab, page, search],
+    queryKey: ["/api/doctor/prescriptions", tab, page, search],
   });
 
   const { data: patients } = useQuery({
-    queryKey: ['/api/doctor/patients/all'],
+    queryKey: ["/api/doctor/patients/all"],
   });
 
   const totalPages = 3; // This should come from API
@@ -52,14 +93,18 @@ export default function DoctorPrescriptions() {
       case "completed":
         return <Badge variant="outline">Completed</Badge>;
       case "cancelled":
-        return <Badge variant="outline" className="text-red-500 border-red-500">Cancelled</Badge>;
+        return (
+          <Badge variant="outline" className="text-red-500 border-red-500">
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold font-heading">Prescriptions</h1>
@@ -100,15 +145,17 @@ export default function DoctorPrescriptions() {
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[250px]" />
-                          <Skeleton className="h-4 w-[200px]" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <Table>
@@ -130,9 +177,14 @@ export default function DoctorPrescriptions() {
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <Avatar>
-                                  <AvatarImage src={prescription.patient.avatarUrl} />
+                                  <AvatarImage
+                                    src={prescription.patient.avatarUrl}
+                                  />
                                   <AvatarFallback>
-                                    {getInitials(prescription.patient.firstName, prescription.patient.lastName)}
+                                    {getInitials(
+                                      prescription.patient.firstName,
+                                      prescription.patient.lastName
+                                    )}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -142,13 +194,23 @@ export default function DoctorPrescriptions() {
                             </TableCell>
                             <TableCell>{prescription.medication}</TableCell>
                             <TableCell>{prescription.dosage}</TableCell>
-                            <TableCell>{format(new Date(prescription.startDate), 'MMM d, yyyy')}</TableCell>
                             <TableCell>
-                              {prescription.endDate ? 
-                                format(new Date(prescription.endDate), 'MMM d, yyyy') : 
-                                'Ongoing'}
+                              {format(
+                                new Date(prescription.startDate),
+                                "MMM d, yyyy"
+                              )}
                             </TableCell>
-                            <TableCell>{getStatusBadge(prescription.status)}</TableCell>
+                            <TableCell>
+                              {prescription.endDate
+                                ? format(
+                                    new Date(prescription.endDate),
+                                    "MMM d, yyyy"
+                                  )
+                                : "Ongoing"}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(prescription.status)}
+                            </TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -157,7 +219,9 @@ export default function DoctorPrescriptions() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Details</DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    View Details
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem>Edit</DropdownMenuItem>
                                   <DropdownMenuItem>Renew</DropdownMenuItem>
                                   <DropdownMenuItem>Cancel</DropdownMenuItem>
@@ -181,21 +245,27 @@ export default function DoctorPrescriptions() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage(Math.max(1, page - 1))} />
+                    <PaginationPrevious
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    />
                   </PaginationItem>
-                  {Array.from({length: totalPages}, (_, i) => i + 1).map(pageNum => (
-                    <PaginationItem key={pageNum}>
-                      <Button 
-                        variant={pageNum === page ? "default" : "outline"} 
-                        size="icon"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <Button
+                          variant={pageNum === page ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage(Math.min(totalPages, page + 1))} />
+                    <PaginationNext
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -205,7 +275,10 @@ export default function DoctorPrescriptions() {
       </div>
 
       {/* New Prescription Dialog */}
-      <Dialog open={isNewPrescriptionOpen} onOpenChange={setIsNewPrescriptionOpen}>
+      <Dialog
+        open={isNewPrescriptionOpen}
+        onOpenChange={setIsNewPrescriptionOpen}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>New Prescription</DialogTitle>
@@ -213,7 +286,7 @@ export default function DoctorPrescriptions() {
               Create a new prescription for a patient.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="patient">Patient</Label>
@@ -225,32 +298,33 @@ export default function DoctorPrescriptions() {
                   <SelectValue placeholder="Select patient" />
                 </SelectTrigger>
                 <SelectContent>
-                  {patients && patients.map((patient: any) => (
-                    <SelectItem key={patient.id} value={String(patient.id)}>
-                      {`${patient.firstName} ${patient.lastName}`}
-                    </SelectItem>
-                  ))}
+                  {patients &&
+                    patients.map((patient: any) => (
+                      <SelectItem key={patient.id} value={String(patient.id)}>
+                        {`${patient.firstName} ${patient.lastName}`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="medication">Medication</Label>
               <Input id="medication" placeholder="Enter medication name" />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="dosage">Dosage</Label>
                 <Input id="dosage" placeholder="e.g. 10mg" />
               </div>
-              
+
               <div className="grid gap-2">
                 <Label htmlFor="frequency">Frequency</Label>
                 <Input id="frequency" placeholder="e.g. Once daily" />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Start Date</Label>
@@ -264,7 +338,11 @@ export default function DoctorPrescriptions() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      {startDate ? (
+                        format(startDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -277,7 +355,7 @@ export default function DoctorPrescriptions() {
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div className="grid gap-2">
                 <Label>End Date (Optional)</Label>
                 <Popover>
@@ -290,7 +368,11 @@ export default function DoctorPrescriptions() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      {endDate ? (
+                        format(endDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -299,26 +381,27 @@ export default function DoctorPrescriptions() {
                       selected={endDate}
                       onSelect={setEndDate}
                       initialFocus
-                      disabled={[
-                        { before: startDate || new Date() }
-                      ]}
+                      disabled={[{ before: startDate || new Date() }]}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="instructions">Special Instructions</Label>
-              <Textarea 
-                id="instructions" 
+              <Textarea
+                id="instructions"
                 placeholder="Add any special instructions for this medication"
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewPrescriptionOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewPrescriptionOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Create Prescription</Button>
@@ -327,6 +410,6 @@ export default function DoctorPrescriptions() {
       </Dialog>
 
       <ChatWidget role="doctor" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }
