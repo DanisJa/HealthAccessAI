@@ -50,10 +50,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await apiRequest('POST', '/api/auth/login', data);
       const userData = await response.json();
+      console.log('User data after login:', userData);
       setUser(userData);
       return userData;
     } catch (error) {
       setUser(null);
+      console.log('User data error:', error);
+
       throw error;
     } finally {
       setIsLoading(false);

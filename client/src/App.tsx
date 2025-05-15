@@ -31,6 +31,7 @@ import HospitalDoctors from "@/pages/hospital/doctors";
 import HospitalPatients from "@/pages/hospital/patients";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, Suspense, lazy } from "react";
+import SupabaseTest from "./components/supabase-test";
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
   const { user, isLoading, isAuthenticated, hasRole } = useAuth();
@@ -45,7 +46,7 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
       } else if (roles && !hasRole(roles)) {
         // Redirect to appropriate dashboard based on role
         if (user && typeof user === 'object' && 'role' in user) {
-          switch(user.role) {
+          switch (user.role) {
             case 'doctor':
               navigate("/doctor");
               break;
@@ -77,7 +78,7 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
   if (mounted) {
     return <Component {...rest} />;
   }
-  
+
   return null;
 }
 
@@ -85,7 +86,7 @@ function Router() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <Switch>
-        <Route path="/" component={() => <Redirect to="/dashboard" />} />
+        <Route path="/" component={SupabaseTest} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route path="/dashboard">
@@ -94,7 +95,7 @@ function Router() {
         <Route path="/settings">
           {() => <ProtectedRoute component={Settings} />}
         </Route>
-        
+
         {/* Doctor routes */}
         <Route path="/doctor">
           {() => <ProtectedRoute component={DoctorDashboard} roles={['doctor']} />}
@@ -117,7 +118,7 @@ function Router() {
         <Route path="/doctor/settings">
           {() => <ProtectedRoute component={Settings} roles={['doctor']} />}
         </Route>
-        
+
         {/* Patient routes */}
         <Route path="/patient">
           {() => <ProtectedRoute component={PatientDashboard} roles={['patient']} />}
@@ -140,7 +141,7 @@ function Router() {
         <Route path="/patient/settings">
           {() => <ProtectedRoute component={Settings} roles={['patient']} />}
         </Route>
-        
+
         {/* Hospital admin routes */}
         <Route path="/hospital">
           {() => <ProtectedRoute component={HospitalDashboard} roles={['hospital']} />}
@@ -160,7 +161,7 @@ function Router() {
         <Route path="/hospital/settings">
           {() => <ProtectedRoute component={Settings} roles={['hospital']} />}
         </Route>
-        
+
         {/* Messaging routes - accessible by all roles */}
         <Route path="/messages">
           {() => <ProtectedRoute component={MessagesPage} />}
@@ -171,7 +172,7 @@ function Router() {
         <Route path="/messages/thread/:id">
           {() => <ProtectedRoute component={MessageThreadPage} />}
         </Route>
-        
+
         {/* Fallback to 404 */}
         <Route component={NotFound} />
       </Switch>
