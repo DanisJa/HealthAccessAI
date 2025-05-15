@@ -11,13 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { MessageList } from "@/components/messaging/message-list";
 import { Inbox, Send, Plus } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function MessagesPage() {
   const [activeTab, setActiveTab] = useState("inbox");
-  
+
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -33,7 +33,7 @@ export default function MessagesPage() {
             </Button>
           </Link>
         </div>
-        
+
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -44,7 +44,11 @@ export default function MessagesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="inbox" value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              defaultValue="inbox"
+              value={activeTab}
+              onValueChange={setActiveTab}
+            >
               <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
                 <TabsTrigger value="inbox" className="flex items-center gap-2">
                   <Inbox className="h-4 w-4" />
@@ -55,11 +59,11 @@ export default function MessagesPage() {
                   Sent
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="inbox">
                 <MessageList type="inbox" />
               </TabsContent>
-              
+
               <TabsContent value="sent">
                 <MessageList type="sent" />
               </TabsContent>
@@ -67,6 +71,6 @@ export default function MessagesPage() {
           </CardContent>
         </Card>
       </div>
-    </PageContainer>
+    </DashboardLayout>
   );
 }

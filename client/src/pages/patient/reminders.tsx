@@ -1,46 +1,68 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Search, 
-  RefreshCw, 
-  Plus, 
-  Bell, 
+import {
+  Search,
+  RefreshCw,
+  Plus,
+  Bell,
   Calendar as CalendarIcon,
-  CheckCircle2, 
+  CheckCircle2,
   Check,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HospitalSelector } from "@/components/common/hospital-selector";
 import { useHospital } from "@/hooks/use-hospital";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
 export default function PatientReminders() {
   const [search, setSearch] = useState("");
@@ -50,42 +72,49 @@ export default function PatientReminders() {
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderType, setReminderType] = useState("medication");
   const [reminderDescription, setReminderDescription] = useState("");
-  const [reminderDate, setReminderDate] = useState<Date | undefined>(new Date());
+  const [reminderDate, setReminderDate] = useState<Date | undefined>(
+    new Date()
+  );
   const [reminderTime, setReminderTime] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState("");
-  
+
   const { toast } = useToast();
   const { selectedHospital } = useHospital();
-  
+
   // Ensure hospitalId is properly typed as a number or undefined
-  const hospitalId = selectedHospital && typeof selectedHospital === 'object' ? selectedHospital.id : undefined;
+  const hospitalId =
+    selectedHospital && typeof selectedHospital === "object"
+      ? selectedHospital.id
+      : undefined;
 
   const { data: reminders, isLoading } = useQuery({
-    queryKey: ['/api/patient/reminders', tab, page, search, hospitalId],
+    queryKey: ["/api/patient/reminders", tab, page, search, hospitalId],
     queryFn: async () => {
       const params = new URLSearchParams({
         tab,
         page: page.toString(),
         search,
-        filtered: "true"
+        filtered: "true",
       });
-      
+
       if (hospitalId) {
-        params.append('hospitalId', hospitalId.toString());
+        params.append("hospitalId", hospitalId.toString());
       }
-      
-      const response = await fetch(`/api/patient/reminders?${params.toString()}`);
+
+      const response = await fetch(
+        `/api/patient/reminders?${params.toString()}`
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch reminders');
+        throw new Error("Failed to fetch reminders");
       }
       return response.json();
-    }
+    },
   });
 
   const createReminderMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', '/api/patient/reminders', data);
+      const res = await apiRequest("POST", "/api/patient/reminders", data);
       return res.json();
     },
     onSuccess: () => {
@@ -95,12 +124,13 @@ export default function PatientReminders() {
       });
       setIsNewReminderOpen(false);
       resetForm();
-      queryClient.invalidateQueries({ queryKey: ['/api/patient/reminders'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/patient/reminders"] });
     },
     onError: (error) => {
       toast({
         title: "Failed to create reminder",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     },
@@ -108,7 +138,11 @@ export default function PatientReminders() {
 
   const completeReminderMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest('PATCH', `/api/patient/reminders/${id}/complete`, {});
+      const res = await apiRequest(
+        "PATCH",
+        `/api/patient/reminders/${id}/complete`,
+        {}
+      );
       return res.json();
     },
     onSuccess: () => {
@@ -116,12 +150,13 @@ export default function PatientReminders() {
         title: "Reminder completed",
         description: "Your reminder has been marked as completed.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/patient/reminders'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/patient/reminders"] });
     },
     onError: (error) => {
       toast({
         title: "Failed to complete reminder",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     },
@@ -168,15 +203,15 @@ export default function PatientReminders() {
   const getUrgencyBadge = (dueDate: string) => {
     const today = new Date();
     const reminderDate = new Date(dueDate);
-    
+
     // Reset time part for accurate day comparison
     today.setHours(0, 0, 0, 0);
     reminderDate.setHours(0, 0, 0, 0);
-    
+
     // Calculate days difference
     const diffTime = reminderDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) {
       return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
     } else if (diffDays === 0) {
@@ -184,9 +219,17 @@ export default function PatientReminders() {
     } else if (diffDays === 1) {
       return <Badge className="bg-yellow-100 text-yellow-800">Tomorrow</Badge>;
     } else if (diffDays <= 3) {
-      return <Badge className="bg-yellow-100 text-yellow-800">In {diffDays} days</Badge>;
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800">
+          In {diffDays} days
+        </Badge>
+      );
     } else {
-      return <Badge className="bg-neutral-light text-neutral-dark">In {diffDays} days</Badge>;
+      return (
+        <Badge className="bg-neutral-light text-neutral-dark">
+          In {diffDays} days
+        </Badge>
+      );
     }
   };
 
@@ -195,13 +238,13 @@ export default function PatientReminders() {
     if (!type) {
       return <span className="material-icons">notifications</span>;
     }
-    
+
     switch (type.toLowerCase()) {
-      case 'medication':
+      case "medication":
         return <span className="material-icons">medication</span>;
-      case 'appointment':
+      case "appointment":
         return <span className="material-icons">event</span>;
-      case 'measurement':
+      case "measurement":
         return <span className="material-icons">monitor_heart</span>;
       default:
         return <span className="material-icons">notifications</span>;
@@ -209,16 +252,18 @@ export default function PatientReminders() {
   };
 
   return (
-    <PageContainer>
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-heading">My Reminders</h1>
-            {selectedHospital && typeof selectedHospital === 'object' && selectedHospital.name && (
-              <p className="text-sm text-muted-foreground">
-                Filtered by {selectedHospital.name}
-              </p>
-            )}
+            {selectedHospital &&
+              typeof selectedHospital === "object" &&
+              selectedHospital.name && (
+                <p className="text-sm text-muted-foreground">
+                  Filtered by {selectedHospital.name}
+                </p>
+              )}
           </div>
           <div className="flex items-center gap-2">
             <HospitalSelector />
@@ -260,15 +305,17 @@ export default function PatientReminders() {
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[250px]" />
-                          <Skeleton className="h-4 w-[200px]" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <Table>
@@ -294,50 +341,71 @@ export default function PatientReminders() {
                                 <div>
                                   {reminder.title}
                                   {reminder.description && (
-                                    <p className="text-xs text-muted-foreground">{reminder.description}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {reminder.description}
+                                    </p>
                                   )}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {reminder.type ? `${reminder.type.charAt(0).toUpperCase()}${reminder.type.slice(1)}` : 'General'}
+                                {reminder.type
+                                  ? `${reminder.type
+                                      .charAt(0)
+                                      .toUpperCase()}${reminder.type.slice(1)}`
+                                  : "General"}
                               </Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col">
-                                <span>{format(new Date(reminder.dueDate), 'MMM d, yyyy')}</span>
+                                <span>
+                                  {format(
+                                    new Date(reminder.dueDate),
+                                    "MMM d, yyyy"
+                                  )}
+                                </span>
                                 <span className="text-xs text-muted-foreground">
-                                  {format(new Date(reminder.dueDate), 'h:mm a')}
+                                  {format(new Date(reminder.dueDate), "h:mm a")}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell>
                               {reminder.recurring ? (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-700"
+                                >
                                   {reminder.frequency}
                                 </Badge>
                               ) : (
-                                <span className="text-muted-foreground">No</span>
+                                <span className="text-muted-foreground">
+                                  No
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
                               {reminder.completed ? (
-                                <Badge className="bg-green-500">Completed</Badge>
+                                <Badge className="bg-green-500">
+                                  Completed
+                                </Badge>
                               ) : (
                                 getUrgencyBadge(reminder.dueDate)
                               )}
                             </TableCell>
                             <TableCell>
                               {!reminder.completed ? (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   className="flex items-center text-green-600 border-green-600 hover:bg-green-50"
-                                  onClick={() => completeReminderMutation.mutate(reminder.id)}
+                                  onClick={() =>
+                                    completeReminderMutation.mutate(reminder.id)
+                                  }
                                   disabled={completeReminderMutation.isPending}
                                 >
-                                  <CheckCircle2 className="mr-1 h-4 w-4" /> Mark as Done
+                                  <CheckCircle2 className="mr-1 h-4 w-4" /> Mark
+                                  as Done
                                 </Button>
                               ) : (
                                 <span className="flex items-center text-green-600">
@@ -362,21 +430,27 @@ export default function PatientReminders() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={() => setPage(Math.max(1, page - 1))} />
+                    <PaginationPrevious
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    />
                   </PaginationItem>
-                  {Array.from({length: totalPages}, (_, i) => i + 1).map(pageNum => (
-                    <PaginationItem key={pageNum}>
-                      <Button
-                        variant={pageNum === page ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <PaginationItem key={pageNum}>
+                        <Button
+                          variant={pageNum === page ? "default" : "outline"}
+                          size="icon"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext onClick={() => setPage(Math.min(totalPages, page + 1))} />
+                    <PaginationNext
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -394,7 +468,7 @@ export default function PatientReminders() {
               Set up a reminder for your health activities.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="reminder-title">Reminder Title</Label>
@@ -405,27 +479,28 @@ export default function PatientReminders() {
                 onChange={(e) => setReminderTitle(e.target.value)}
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="reminder-type">Reminder Type</Label>
-              <Select
-                value={reminderType}
-                onValueChange={setReminderType}
-              >
+              <Select value={reminderType} onValueChange={setReminderType}>
                 <SelectTrigger id="reminder-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="medication">Medication</SelectItem>
                   <SelectItem value="appointment">Appointment</SelectItem>
-                  <SelectItem value="measurement">Health Measurement</SelectItem>
+                  <SelectItem value="measurement">
+                    Health Measurement
+                  </SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-2">
-              <Label htmlFor="reminder-description">Description (Optional)</Label>
+              <Label htmlFor="reminder-description">
+                Description (Optional)
+              </Label>
               <Textarea
                 id="reminder-description"
                 placeholder="Add more details about this reminder"
@@ -433,7 +508,7 @@ export default function PatientReminders() {
                 onChange={(e) => setReminderDescription(e.target.value)}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Date</Label>
@@ -447,7 +522,11 @@ export default function PatientReminders() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {reminderDate ? format(reminderDate, "PPP") : <span>Pick a date</span>}
+                      {reminderDate ? (
+                        format(reminderDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -460,48 +539,46 @@ export default function PatientReminders() {
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               <div className="grid gap-2">
                 <Label htmlFor="reminder-time">Time</Label>
-                <Select
-                  value={reminderTime}
-                  onValueChange={setReminderTime}
-                >
+                <Select value={reminderTime} onValueChange={setReminderTime}>
                   <SelectTrigger id="reminder-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({length: 24}, (_, hour) => {
+                    {Array.from({ length: 24 }, (_, hour) => {
                       return [
                         <SelectItem key={`${hour}:00`} value={`${hour}:00`}>
-                          {`${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
+                          {`${
+                            hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                          }:00 ${hour >= 12 ? "PM" : "AM"}`}
                         </SelectItem>,
                         <SelectItem key={`${hour}:30`} value={`${hour}:30`}>
-                          {`${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}:30 ${hour >= 12 ? 'PM' : 'AM'}`}
-                        </SelectItem>
+                          {`${
+                            hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                          }:30 ${hour >= 12 ? "PM" : "AM"}`}
+                        </SelectItem>,
                       ];
                     }).flat()}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="recurring" 
-                checked={isRecurring} 
+              <Checkbox
+                id="recurring"
+                checked={isRecurring}
                 onCheckedChange={(checked) => setIsRecurring(checked === true)}
               />
               <Label htmlFor="recurring">Recurring Reminder</Label>
             </div>
-            
+
             {isRecurring && (
               <div className="grid gap-2">
                 <Label htmlFor="frequency">Frequency</Label>
-                <Select
-                  value={frequency}
-                  onValueChange={setFrequency}
-                >
+                <Select value={frequency} onValueChange={setFrequency}>
                   <SelectTrigger id="frequency">
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
@@ -514,26 +591,27 @@ export default function PatientReminders() {
                 </Select>
               </div>
             )}
-            
+
             {reminderType === "medication" && (
               <div className="bg-blue-50 p-3 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                 <p className="text-sm text-blue-700">
-                  Medication reminders will help you remember to take your prescribed medications on time.
+                  Medication reminders will help you remember to take your
+                  prescribed medications on time.
                 </p>
               </div>
             )}
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsNewReminderOpen(false)}
               disabled={createReminderMutation.isPending}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateReminder}
               disabled={createReminderMutation.isPending}
             >
@@ -551,6 +629,6 @@ export default function PatientReminders() {
       </Dialog>
 
       <ChatWidget role="patient" />
-    </PageContainer>
+    </DashboardLayout>
   );
 }
