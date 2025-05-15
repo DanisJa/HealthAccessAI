@@ -782,8 +782,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const data = insertReminderSchema.parse(req.body);
+      // Extract hospitalId if it exists
+      const hospitalId = data.hospitalId ? parseInt(data.hospitalId.toString()) : undefined;
+      
       const reminder = await storage.createReminder({
         ...data,
+        hospitalId,
         userId: user.id
       });
       

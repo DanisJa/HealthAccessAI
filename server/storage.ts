@@ -982,8 +982,12 @@ export class MemStorage implements IStorage {
         !reminder.completed &&
         new Date(reminder.dueDate) >= today && 
         new Date(reminder.dueDate) <= nextWeek &&
-        // Filter out appointment reminders if we're filtering by hospital
-        (!hospitalId || !reminder.title.toLowerCase().includes('followup'))
+        // Apply hospital filter if needed
+        (!hospitalId || 
+          reminder.hospitalId === hospitalId || 
+          // Include non-hospital specific reminders that aren't followups
+          (!reminder.hospitalId && !reminder.title.toLowerCase().includes('followup'))
+        )
       );
     
     // Combine and sort all reminders
@@ -1011,16 +1015,19 @@ export class MemStorage implements IStorage {
       .filter(reminder => {
         const matchesPatient = reminder.userId === patientId;
         
-        // If hospital filter is applied, only include reminders related to this hospital
-        if (hospitalId && hospitalAppointments.length > 0) {
+        // If hospital filter is applied, filter by hospitalId or appointment relation
+        if (hospitalId) {
+          // Check if reminder has the matching hospitalId directly
+          const hasMatchingHospitalId = reminder.hospitalId === hospitalId;
+          
           // Check if reminder is related to a hospital appointment (for followups)
           const isHospitalRelated = reminder.title.toLowerCase().includes('followup') && 
             hospitalAppointments.some(apt => 
               reminder.title.toLowerCase().includes(apt.title.toLowerCase())
             );
           
-          // Include both hospital-specific reminders and non-hospital-specific reminders
-          return matchesPatient && (isHospitalRelated || !reminder.title.toLowerCase().includes('followup'));
+          // Include hospital-specific reminders or appointment-related reminders
+          return matchesPatient && (hasMatchingHospitalId || isHospitalRelated);
         }
         
         return matchesPatient;
