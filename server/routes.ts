@@ -494,7 +494,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const stats = await storage.getPatientStats(user.id);
+      const { hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const stats = await storage.getPatientStats(user.id, hospitalIdParam);
       res.status(200).json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to get patient stats" });
@@ -513,7 +516,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const appointments = await storage.getPatientUpcomingAppointments(user.id);
+      const { hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const appointments = await storage.getPatientUpcomingAppointments(user.id, hospitalIdParam);
       res.status(200).json(appointments);
     } catch (error) {
       res.status(500).json({ message: "Failed to get upcoming appointments" });
@@ -532,7 +538,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const doctors = await storage.getAvailableDoctors();
+      const { hospitalId } = req.query;
+      const hospitalIdParam = hospitalId ? parseInt(hospitalId as string) : undefined;
+      
+      const doctors = await storage.getAvailableDoctors(hospitalIdParam);
       res.status(200).json(doctors);
     } catch (error) {
       res.status(500).json({ message: "Failed to get available doctors" });
