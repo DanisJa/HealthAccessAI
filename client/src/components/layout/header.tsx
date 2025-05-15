@@ -23,13 +23,9 @@ export function Header() {
   const logoutMutation = {
     mutate: async () => {
       try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        navigate('/auth/login');
+        await apiRequest('POST', '/api/auth/logout');
+        // Invalidate the auth query
+        window.location.href = '/login';
       } catch (error) {
         console.error('Logout failed:', error);
       }

@@ -123,7 +123,7 @@ export function ComposeMessage() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {recipients?.map((recipient: any) => (
+                      {Array.isArray(recipients) ? recipients.map((recipient: any) => (
                         <SelectItem 
                           key={recipient.id} 
                           value={recipient.id.toString()}
@@ -131,7 +131,7 @@ export function ComposeMessage() {
                           {recipient.firstName} {recipient.lastName}
                           {recipient.specialty && ` (${recipient.specialty})`}
                         </SelectItem>
-                      ))}
+                      )) : null}
                     </SelectContent>
                   </Select>
                   <FormMessage />

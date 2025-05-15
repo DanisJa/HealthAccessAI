@@ -59,8 +59,8 @@ export function MessageList({ type }: MessageListProps) {
     enabled: !!user,
   });
   
-  const messages = data || [];
-  const totalPages = Math.ceil((data?.length || 0) / pageSize);
+  const messages: Message[] = Array.isArray(data) ? data : [];
+  const totalPages = Math.ceil(messages.length / pageSize);
   
   if (isLoading) {
     return (

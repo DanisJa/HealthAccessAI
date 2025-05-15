@@ -69,7 +69,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
     enabled: !!user && !!messageId,
   });
   
-  const messages: Message[] = data || [];
+  const messages: Message[] = Array.isArray(data) ? data : [];
   
   // Mark messages as read when thread is opened
   const markAsRead = useMutation({

@@ -49,7 +49,7 @@ export function Sidebar() {
     queryKey: ['/api/auth/me'],
   });
 
-  const role = user?.role || 'patient';
+  const role = user && typeof user === 'object' && 'role' in user ? user.role : 'patient';
 
   const isActive = (path: string) => {
     return location.startsWith(path);
