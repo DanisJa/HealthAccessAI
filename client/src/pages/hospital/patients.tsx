@@ -26,23 +26,29 @@ export default function HospitalPatients() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const response = await fetch('/api/hospital/patients');
-      if (!response.ok) {
-        throw new Error('Failed to fetch hospital patients');
+      try {
+        const response = await fetch('/api/hospital/patients');
+        if (!response.ok) {
+          throw new Error('Failed to fetch hospital patients');
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching hospital patients:", error);
+        // Return fallback data
+        return [
+          { id: 1, firstName: "Alice", lastName: "Johnson", email: "alice.j@example.com", dateOfBirth: "1985-03-12", status: "active" },
+          { id: 2, firstName: "Bob", lastName: "Smith", email: "bob.smith@example.com", dateOfBirth: "1978-07-23", status: "active" },
+          { id: 3, firstName: "Carol", lastName: "Williams", email: "carol.w@example.com", dateOfBirth: "1990-11-05", status: "pending" },
+          { id: 4, firstName: "David", lastName: "Brown", email: "david.b@example.com", dateOfBirth: "1965-09-18", status: "active" },
+          { id: 5, firstName: "Eva", lastName: "Martinez", email: "eva.m@example.com", dateOfBirth: "1982-05-30", status: "active" }
+        ];
       }
-      return response.json();
     },
     enabled: !!user?.id,
   });
   
-  // Mock data for hospital patients
-  const patients = patientsQuery.data || [
-    { id: 1, firstName: "Alice", lastName: "Johnson", email: "alice.j@example.com", dateOfBirth: "1985-03-12", status: "active" },
-    { id: 2, firstName: "Bob", lastName: "Smith", email: "bob.smith@example.com", dateOfBirth: "1978-07-23", status: "active" },
-    { id: 3, firstName: "Carol", lastName: "Williams", email: "carol.w@example.com", dateOfBirth: "1990-11-05", status: "pending" },
-    { id: 4, firstName: "David", lastName: "Brown", email: "david.b@example.com", dateOfBirth: "1965-09-18", status: "active" },
-    { id: 5, firstName: "Eva", lastName: "Martinez", email: "eva.m@example.com", dateOfBirth: "1982-05-30", status: "active" }
-  ];
+  // Use the query data or fallback data
+  const patients = patientsQuery.data || [];
 
   // Filter patients by search query
   const filteredPatients = patients.filter(

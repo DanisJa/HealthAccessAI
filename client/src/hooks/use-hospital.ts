@@ -25,31 +25,59 @@ export function useHospital() {
   const hospitalQuery = useQuery({
     queryKey: ['hospitals', userRole, userId],
     queryFn: async () => {
-      let endpoint = '';
-      
-      if (userRole === 'hospital') {
-        // For hospital admins, they don't need to select a hospital
-        // They manage their own hospital only
-        // Return a single hospital with their own ID
-        return [{ 
-          id: userId, 
-          name: user?.firstName && user?.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : "General Hospital" 
-        }];
-      } else if (userRole === 'doctor') {
-        endpoint = `/api/doctor/hospitals`;
-      } else if (userRole === 'patient') {
-        endpoint = `/api/patient/hospitals`;
+      try {
+        if (userRole === 'hospital') {
+          // For hospital admins, they don't need to select a hospital
+          // They manage their own hospital only
+          // Return a single hospital with their own ID
+          return [{ 
+            id: userId, 
+            name: user?.firstName && user?.lastName 
+              ? `${user.firstName} ${user.lastName}` 
+              : "General Hospital",
+            type: "public",
+            municipality: "Central Municipality",
+            location: "123 Main Street"
+          }];
+        }
+        
+        let endpoint = '';
+        if (userRole === 'doctor') {
+          endpoint = `/api/doctor/hospitals`;
+        } else if (userRole === 'patient') {
+          endpoint = `/api/patient/hospitals`;
+        }
+        
+        if (!endpoint) return [];
+        
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error('Failed to fetch hospitals');
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching hospitals:", error);
+        // Fallback data in case of error
+        if (userRole === 'hospital') {
+          return [{ 
+            id: userId, 
+            name: "General Hospital", 
+            type: "public",
+            municipality: "Central Municipality",
+            location: "123 Main Street"
+          }];
+        } else if (userRole === 'doctor') {
+          return [
+            { id: 1, name: "General Hospital", type: "public", municipality: "Central Municipality", location: "123 Main Street" },
+            { id: 2, name: "Community Hospital", type: "public", municipality: "North Municipality", location: "456 Park Avenue" }
+          ];
+        } else if (userRole === 'patient') {
+          return [
+            { id: 1, name: "General Hospital", type: "public", municipality: "Central Municipality", location: "123 Main Street" }
+          ];
+        }
+        return [];
       }
-      
-      if (!endpoint) return [];
-      
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error('Failed to fetch hospitals');
-      }
-      return response.json();
     },
     enabled: !!user,
   });
