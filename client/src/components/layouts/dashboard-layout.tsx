@@ -81,10 +81,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <nav className="space-y-1">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <a 
-                  className={`flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium ${
+                <Button 
+                  variant="ghost"
+                  className={`w-full justify-between px-3 py-2 h-auto rounded-md text-sm font-medium ${
                     location === item.href || location.startsWith(item.href + '/')
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-primary/10 text-primary hover:bg-primary/20'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
@@ -95,7 +96,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   {(location === item.href || location.startsWith(item.href + '/')) && (
                     <ChevronRight className="h-4 w-4" />
                   )}
-                </a>
+                </Button>
               </Link>
             ))}
           </nav>

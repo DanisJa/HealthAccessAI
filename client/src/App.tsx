@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import Dashboard from "@/pages/dashboard";
+import Settings from "@/pages/settings";
 import { AuthProvider } from "@/lib/auth.tsx";
 import { ChatProvider } from "@/lib/openai.tsx";
 import DoctorDashboard from "@/pages/doctor";
@@ -25,11 +26,13 @@ import HospitalDashboard from "@/pages/hospital";
 import HospitalDoctors from "@/pages/hospital/doctors";
 import HospitalPatients from "@/pages/hospital/patients";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
   const { user, isLoading } = useAuth();
   const [location, navigate] = useLocation();
+  // Store the component in a ref to prevent rerendering
+  const [mounted] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -47,79 +50,95 @@ function ProtectedRoute({ component: Component, roles, ...rest }: any) {
     return null;
   }
 
-  return <Component {...rest} />;
+  // Only render the component once it's mounted to prevent resetting state during navigation
+  if (mounted) {
+    return <Component {...rest} />;
+  }
+  
+  return null;
 }
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={() => <Redirect to="/dashboard" />} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/dashboard">
-        {() => <ProtectedRoute component={Dashboard} />}
-      </Route>
-      
-      {/* Doctor routes */}
-      <Route path="/doctor">
-        {() => <ProtectedRoute component={DoctorDashboard} roles={['doctor']} />}
-      </Route>
-      <Route path="/doctor/patients">
-        {() => <ProtectedRoute component={DoctorPatients} roles={['doctor']} />}
-      </Route>
-      <Route path="/doctor/medical-records">
-        {() => <ProtectedRoute component={DoctorMedicalRecords} roles={['doctor']} />}
-      </Route>
-      <Route path="/doctor/appointments">
-        {() => <ProtectedRoute component={DoctorAppointments} roles={['doctor']} />}
-      </Route>
-      <Route path="/doctor/prescriptions">
-        {() => <ProtectedRoute component={DoctorPrescriptions} roles={['doctor']} />}
-      </Route>
-      
-      {/* Patient routes */}
-      <Route path="/patient">
-        {() => <ProtectedRoute component={PatientDashboard} roles={['patient']} />}
-      </Route>
-      <Route path="/patient/health">
-        {() => <ProtectedRoute component={PatientHealth} roles={['patient']} />}
-      </Route>
-      <Route path="/patient/medical-records">
-        {() => <ProtectedRoute component={PatientMedicalRecords} roles={['patient']} />}
-      </Route>
-      <Route path="/patient/appointments">
-        {() => <ProtectedRoute component={PatientAppointments} roles={['patient']} />}
-      </Route>
-      <Route path="/patient/medications">
-        {() => <ProtectedRoute component={PatientMedications} roles={['patient']} />}
-      </Route>
-      <Route path="/patient/reminders">
-        {() => <ProtectedRoute component={PatientReminders} roles={['patient']} />}
-      </Route>
-      
-      {/* Hospital admin routes */}
-      <Route path="/hospital">
-        {() => <ProtectedRoute component={HospitalDashboard} roles={['hospital']} />}
-      </Route>
-      <Route path="/hospital/doctors">
-        {() => <ProtectedRoute component={HospitalDoctors} roles={['hospital']} />}
-      </Route>
-      <Route path="/hospital/patients">
-        {() => <ProtectedRoute component={HospitalPatients} roles={['hospital']} />}
-      </Route>
-      <Route path="/hospital/appointments">
-        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
-      </Route>
-      <Route path="/hospital/departments">
-        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
-      </Route>
-      <Route path="/hospital/settings">
-        {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
-      </Route>
-      
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <Switch>
+        <Route path="/" component={() => <Redirect to="/dashboard" />} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/dashboard">
+          {() => <ProtectedRoute component={Dashboard} />}
+        </Route>
+        <Route path="/settings">
+          {() => <ProtectedRoute component={Settings} />}
+        </Route>
+        
+        {/* Doctor routes */}
+        <Route path="/doctor">
+          {() => <ProtectedRoute component={DoctorDashboard} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/patients">
+          {() => <ProtectedRoute component={DoctorPatients} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/medical-records">
+          {() => <ProtectedRoute component={DoctorMedicalRecords} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/appointments">
+          {() => <ProtectedRoute component={DoctorAppointments} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/prescriptions">
+          {() => <ProtectedRoute component={DoctorPrescriptions} roles={['doctor']} />}
+        </Route>
+        <Route path="/doctor/settings">
+          {() => <ProtectedRoute component={Settings} roles={['doctor']} />}
+        </Route>
+        
+        {/* Patient routes */}
+        <Route path="/patient">
+          {() => <ProtectedRoute component={PatientDashboard} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/health">
+          {() => <ProtectedRoute component={PatientHealth} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/medical-records">
+          {() => <ProtectedRoute component={PatientMedicalRecords} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/appointments">
+          {() => <ProtectedRoute component={PatientAppointments} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/medications">
+          {() => <ProtectedRoute component={PatientMedications} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/reminders">
+          {() => <ProtectedRoute component={PatientReminders} roles={['patient']} />}
+        </Route>
+        <Route path="/patient/settings">
+          {() => <ProtectedRoute component={Settings} roles={['patient']} />}
+        </Route>
+        
+        {/* Hospital admin routes */}
+        <Route path="/hospital">
+          {() => <ProtectedRoute component={HospitalDashboard} roles={['hospital']} />}
+        </Route>
+        <Route path="/hospital/doctors">
+          {() => <ProtectedRoute component={HospitalDoctors} roles={['hospital']} />}
+        </Route>
+        <Route path="/hospital/patients">
+          {() => <ProtectedRoute component={HospitalPatients} roles={['hospital']} />}
+        </Route>
+        <Route path="/hospital/appointments">
+          {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
+        </Route>
+        <Route path="/hospital/departments">
+          {() => <ProtectedRoute component={NotFound} roles={['hospital']} />}
+        </Route>
+        <Route path="/hospital/settings">
+          {() => <ProtectedRoute component={Settings} roles={['hospital']} />}
+        </Route>
+        
+        {/* Fallback to 404 */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

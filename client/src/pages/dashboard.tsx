@@ -11,12 +11,13 @@ export default function Dashboard() {
   const [_, navigate] = useLocation();
 
   useEffect(() => {
+    console.log(user?.role);
     if (!isLoading && user) {
       if (user.role === "doctor") {
         navigate("/doctor");
       } else if (user.role === "patient") {
         navigate("/patient");
-      }
+      } else if (user.role === "hospital")     {navigate("/hospital");}
     }
   }, [user, isLoading, navigate]);
 
