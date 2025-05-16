@@ -22,7 +22,9 @@ export function HospitalSelector() {
     useHospital();
 
   const selectedData = hospitals.find((h) => h.id === selectedHospital) || null;
-
+  const truncateName = (name: string) => {
+    return name.length > 25 ? `${name.substring(0, 25)}...` : name;
+  };
   if (isLoading) {
     return (
       <Button
@@ -63,7 +65,9 @@ export function HospitalSelector() {
           <div className="flex items-center">
             <Building className="mr-2 h-4 w-4" />
             <span className="text-xs truncate">
-              {selectedData ? selectedData.name : "Select hospital"}
+              {selectedData
+                ? truncateName(selectedData.name)
+                : "Select hospital"}
             </span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
