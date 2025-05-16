@@ -1,44 +1,69 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { getInitials, getStatusColor } from "@/lib/utils";
 
 interface Patient {
-  id: number;
+  id: string; // Supabase UUID
   firstName: string;
   lastName: string;
   age: number;
   gender: string;
   status: string;
-  lastVisit: string;
+  lastVisit: string; // ISO timestamp
   avatarUrl?: string;
 }
 
 interface PatientListProps {
   patients: Patient[];
+  isLoading?: boolean;
 }
 
-export function PatientList({ patients }: PatientListProps) {
-  const [_, navigate] = useLocation();
+export function PatientList({ patients, isLoading = false }: PatientListProps) {
+  const [, navigate] = useLocation();
 
-  const getStatusBadge = (status: string) => {
+  if (isLoading) {
     return (
-      <Badge className={getStatusColor(status)}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Recent Patients</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
     );
-  };
+  }
+
+  const getStatusBadge = (status: string) => (
+    <Badge className={getStatusColor(status)}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
+  );
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle>Recent Patients</CardTitle>
-          <Button variant="link" size="sm" onClick={() => navigate("/doctor/patients")}>View all</Button>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => navigate("/doctor/patients")}
+          >
+            View all
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -74,13 +99,20 @@ export function PatientList({ patients }: PatientListProps) {
                         </div>
                       </div>
                     </TableCell>
+
                     <TableCell>{getStatusBadge(patient.status)}</TableCell>
-                    <TableCell>{patient.lastVisit}</TableCell>
+
+                    <TableCell>
+                      {new Date(patient.lastVisit).toLocaleDateString()}
+                    </TableCell>
+
                     <TableCell className="text-right">
-                      <Button 
-                        variant="link" 
-                        size="sm" 
-                        onClick={() => navigate(`/doctor/patients/${patient.id}`)}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/doctor/patients/${patient.id}`)
+                        }
                       >
                         View
                       </Button>
