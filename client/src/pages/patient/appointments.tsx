@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,10 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/../utils/supabaseClient";
 
 export default function PatientAppointments() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -55,16 +57,81 @@ export default function PatientAppointments() {
   const [appointmentDescription, setAppointmentDescription] = useState("");
   const { toast } = useToast();
 
+  // const supabase = useSupabaseClient();
+  const { user } = useAuth(); // Ako koristiš supabase-auth-helpers
+
+  const [filterDoctor, setFilterDoctor] = useState<string>("");
+  const [filterHospital, setFilterHospital] = useState<string>("");
+
+  // const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
+  //   queryKey: [
+  //     "/api/patient/appointments",
+  //     tab,
+  //     date ? format(date, "yyyy-MM-dd") : null,
+  //   ],
+  // });
   const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
     queryKey: [
-      "/api/patient/appointments",
+      "appointments",
       tab,
       date ? format(date, "yyyy-MM-dd") : null,
+      filterDoctor,
+      filterHospital,
     ],
+    queryFn: async () => {
+      const selectedDate = format(date!, "yyyy-MM-dd");
+
+      let query = supabase
+        .from("appointments")
+        .select(
+          `*,
+         doctor:doctor_id(first_name, last_name),
+         hospital:hospital_id(name)`
+        )
+        .eq("patient_id", user?.id)
+        .gte("date", `${selectedDate}T00:00:00`)
+        .lt("date", `${selectedDate}T23:59:59`);
+
+      if (tab === "upcoming")
+        // query = query.in("status", ["scheduled", "pending", "approved"]);
+        query = query.in("status", ["pending", "approved"]);
+      if (tab === "completed") query = query.eq("status", "completed");
+      if (tab === "cancelled") query = query.eq("status", "cancelled");
+
+      if (filterDoctor) query = query.eq("doctor_id", filterDoctor);
+      if (filterHospital) query = query.eq("hospital_id", filterHospital);
+
+      const { data, error } = await query;
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!user?.id && !!date,
   });
 
   const { data: doctors, isLoading: isDoctorsLoading } = useQuery({
-    queryKey: ["/api/patient/doctors"],
+    queryKey: ["doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, first_name, last_name, specialty, hospital_id")
+        .eq("role", "doctor");
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  });
+
+  const { data: hospitals } = useQuery({
+    queryKey: ["hospitals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hospitals")
+        .select("id, name, type");
+
+      if (error) throw new Error(error.message);
+      return data;
+    },
   });
 
   const createAppointmentMutation = useMutation({
@@ -99,8 +166,29 @@ export default function PatientAppointments() {
     },
   });
 
-  const handleCreateAppointment = () => {
-    if (!selectedDoctor || !appointmentTime || !date || !appointmentTitle) {
+  const handleCreateAppointment = async () => {
+    let doctorIdToUse = selectedDoctor;
+
+    if (selectedHospitalType === "state") {
+      const { data: stateDoctors, error } = await supabase
+        .from("hospital_doctors")
+        .select("doctor_id")
+        .eq("hospital_id", selectedHospitalId)
+        .limit(1);
+
+      if (error || !stateDoctors?.length) {
+        toast({
+          title: "Error",
+          description: "No doctors available in selected state hospital.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      doctorIdToUse = stateDoctors[0].doctor_id;
+    }
+
+    if (!doctorIdToUse || !appointmentTime || !date || !appointmentTitle) {
       toast({
         title: "Incomplete form",
         description: "Please fill in all required fields.",
@@ -109,19 +197,48 @@ export default function PatientAppointments() {
       return;
     }
 
-    // Combine date and time
     const appointmentDate = new Date(date);
     const [hours, minutes] = appointmentTime.split(":").map(Number);
     appointmentDate.setHours(hours, minutes);
 
     createAppointmentMutation.mutate({
-      doctorId: parseInt(selectedDoctor),
+      doctor_id: doctorIdToUse,
+      patient_id: user?.id,
+      hospital_id: selectedHospitalId,
       date: appointmentDate.toISOString(),
       title: appointmentTitle,
       description: appointmentDescription,
-      duration: 30, // Default duration in minutes
+      duration: 30,
+      status: "pending",
     });
   };
+
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
+  const [symptoms, setSymptoms] = useState("");
+  const [predictedDisease, setPredictedDisease] = useState<string | null>(null);
+  const [isLoadingDiagnosis, setIsLoadingDiagnosis] = useState(false);
+  const [selectedHospitalType, setSelectedHospitalType] = useState<string>("");
+
+  const [hospitalDoctors, setHospitalDoctors] = useState([]);
+
+  useEffect(() => {
+    const fetchHospitalDoctors = async () => {
+      if (selectedHospitalId && selectedHospitalType === "private") {
+        const { data, error } = await supabase
+          .from("hospital_doctors")
+          .select(
+            "doctor_id, doctor:doctor_id(id, first_name, last_name, specialty)"
+          )
+          .eq("hospital_id", selectedHospitalId);
+
+        if (!error && data) {
+          setHospitalDoctors(data.map((entry) => entry.doctor));
+        }
+      }
+    };
+
+    fetchHospitalDoctors();
+  }, [selectedHospitalId, selectedHospitalType]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -178,6 +295,37 @@ export default function PatientAppointments() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="flex gap-4 mb-4">
+                  <Select value={filterDoctor} onValueChange={setFilterDoctor}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by doctor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {doctors?.map((d: any) => (
+                        <SelectItem key={d.id} value={d.id.toString()}>
+                          Dr. {d.firstName} {d.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={filterHospital}
+                    onValueChange={setFilterHospital}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by hospital" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hospitals?.map((h: any) => (
+                        <SelectItem key={h.id} value={h.id.toString()}>
+                          {h.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <Tabs
                     defaultValue="upcoming"
@@ -320,8 +468,7 @@ export default function PatientAppointments() {
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="doctor">Select Doctor</Label>
-              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+              {/* <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
                 <SelectTrigger id="doctor">
                   <SelectValue placeholder="Choose a doctor" />
                 </SelectTrigger>
@@ -334,7 +481,143 @@ export default function PatientAppointments() {
                       </SelectItem>
                     ))}
                 </SelectContent>
-              </Select>
+              </Select> */}
+
+              <div className="grid gap-2">
+                <Label htmlFor="hospital">Select Hospital</Label>
+                <Select
+                  value={selectedHospitalId}
+                  onValueChange={(hospitalId) => {
+                    setSelectedHospitalId(hospitalId);
+                    const hospital = hospitals?.find(
+                      (h: any) => h.id.toString() === hospitalId
+                    );
+                    setSelectedHospitalType(hospital?.type ?? ""); // assumes type is "private" or "state"
+                  }}
+                >
+                  <SelectTrigger id="hospital">
+                    <SelectValue placeholder="Choose a hospital" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hospitals?.map((hospital: any) => (
+                      <SelectItem
+                        key={hospital.id}
+                        value={hospital.id.toString()}
+                      >
+                        {hospital.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="symptoms">Enter your symptoms</Label>
+                <Textarea
+                  id="symptoms"
+                  placeholder="e.g. headache, sore throat, fatigue..."
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                />
+              </div>
+
+              <Button
+                onClick={async () => {
+                  if (!symptoms) return;
+                  setIsLoadingDiagnosis(true);
+                  setPredictedDisease(null);
+                  try {
+                    const response = await fetch(
+                      "https://api.cropview.aquilla.dev/plant/detect",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ symptoms }),
+                      }
+                    );
+                    const result = await response.json();
+                    setPredictedDisease(result?.disease || "Unknown issue");
+                  } catch (err) {
+                    setPredictedDisease("Error fetching diagnosis.");
+                  }
+                  setIsLoadingDiagnosis(false);
+                }}
+                disabled={!symptoms || isLoadingDiagnosis}
+              >
+                {isLoadingDiagnosis
+                  ? "Analyzing..."
+                  : "Check Potential Disease"}
+              </Button>
+
+              {predictedDisease && (
+                <div className="bg-muted p-3 rounded-md mt-2 space-y-2">
+                  <p className="text-sm">
+                    🧠 <strong>Possible Condition:</strong> {predictedDisease}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsNewAppointmentOpen(false);
+                        router.push(`/triage`);
+                      }}
+                    >
+                      Go to Triage
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        // Scroll to doctor selection
+                        document
+                          .getElementById("doctor")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    >
+                      Book with General Practitioner
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {selectedHospitalType === "private" && (
+                <div className="grid gap-2">
+                  {/* <Label htmlFor="doctor">Select Doctor</Label> */}
+
+                  <Label htmlFor="doctor">Select Doctor</Label>
+                  <Select
+                    value={selectedDoctor}
+                    onValueChange={setSelectedDoctor}
+                  >
+                    <SelectTrigger id="doctor">
+                      <SelectValue placeholder="Choose a doctor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* {doctors
+                        ?.filter(
+                          (doc: any) =>
+                            doc.hospital_id === parseInt(selectedHospitalId) // ako koristiš join
+                        )
+                        .map((doctor: any) => (
+                          <SelectItem
+                            key={doctor.id}
+                            value={doctor.id.toString()}
+                          >
+                            Dr. {doctor.first_name} {doctor.last_name}
+                            {doctor.specialty ? ` - ${doctor.specialty}` : ""}
+                          </SelectItem>
+                        ))} */}
+                      {hospitalDoctors.map((doctor: any) => (
+                        <SelectItem
+                          key={doctor.id}
+                          value={doctor.id.toString()}
+                        >
+                          Dr. {doctor.first_name} {doctor.last_name}
+                          {doctor.specialty ? ` - ${doctor.specialty}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-2">

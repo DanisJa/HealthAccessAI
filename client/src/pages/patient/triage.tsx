@@ -22,7 +22,7 @@ export default function OnlineTriagePage() {
     symptoms: "",
     age: usr?.dateOfBirth
       ? new Date().getFullYear() - new Date(usr.dateOfBirth).getFullYear()
-      : 20,
+      : 2,
     weight: "",
     height: "",
     bloodPressure: "",

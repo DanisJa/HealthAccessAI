@@ -32,6 +32,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
+const fetchPatientsByHospital = async (
+  hospitalId: string,
+  doctorId: string
+) => {
+  const response = await fetch(
+    `/api/doctor/patients?hospitalId=${hospitalId}&doctorId=${doctorId}`
+  );
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
+
 export default function DoctorPatients() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -39,27 +52,13 @@ export default function DoctorPatients() {
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["/api/doctor/patients", tab, page, search],
+    queryFn: () => fetchPatientsByHospital("hospitalId", "doctorId"),
   });
 
   const totalPages = 5; // This should come from API
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-500">Active</Badge>;
-      case "inactive":
-        return <Badge variant="outline">Inactive</Badge>;
-      case "critical":
-        return <Badge className="bg-red-500">Critical</Badge>;
-      case "stable":
-        return <Badge className="bg-blue-500">Stable</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
   };
 
   return (
@@ -78,29 +77,6 @@ export default function DoctorPatients() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="relative w-full md:w-96">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search patients..."
-                    className="pl-10"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-                <Button size="icon" variant="ghost">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <Tabs defaultValue="all" onValueChange={setTab}>
-                <TabsList className="grid w-full md:w-auto grid-cols-3">
-                  <TabsTrigger value="all">All Patients</TabsTrigger>
-                  <TabsTrigger value="active">Active</TabsTrigger>
-                  <TabsTrigger value="critical">Critical</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
               <div className="border rounded-md">
                 {isLoading ? (
                   <div className="p-4 space-y-4">
@@ -121,38 +97,42 @@ export default function DoctorPatients() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Patient</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Last Visit</TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
+
                     <TableBody>
                       {patients && patients.length > 0 ? (
                         patients.map((patient: any) => (
-                          <TableRow key={patient.id}>
+                          <TableRow key={patient.patient_id}>
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <Avatar>
-                                  <AvatarImage src={patient.avatarUrl} />
                                   <AvatarFallback>
                                     {getInitials(
-                                      patient.firstName,
-                                      patient.lastName
+                                      patient.first_name,
+                                      patient.last_name
                                     )}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium">{`${patient.firstName} ${patient.lastName}`}</p>
-                                  <p className="text-xs text-muted-foreground">{`${patient.age}y, ${patient.gender}`}</p>
+                                  <p className="font-medium">
+                                    {`${patient.first_name} ${patient.last_name}`}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    N/A
+                                  </p>
                                 </div>
                               </div>
                             </TableCell>
+
                             <TableCell>
-                              {getStatusBadge(patient.status)}
+                              N/A{" "}
+                              {/* Replace with patient.lastVisit if you have it */}
                             </TableCell>
-                            <TableCell>{patient.lastVisit}</TableCell>
-                            <TableCell>{patient.email}</TableCell>
+                            <TableCell>{patient.email ?? "N/A"}</TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
