@@ -2,7 +2,14 @@ import { create } from "zustand";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { parameters } from "../../../shared/schema";
+
+export interface Hospital {
+  id: number;
+  name: string;
+  type: string;
+  municipality: string;
+  location: string;
+}
 
 type HospitalStore = {
   selectedHospital: number | null;
@@ -19,138 +26,77 @@ export function useHospital() {
   const queryClient = useQueryClient();
   const { selectedHospital, setSelectedHospital } = useHospitalStore();
 
-  // Fetch user's hospitals
   const userRole = user?.role || "";
   const userId = user?.id || 0;
 
-  const hospitalQuery = useQuery({
+  const hospitalQuery = useQuery<Hospital[]>({
     queryKey: ["hospitals", userRole, userId],
-    queryFn: async () => {
-      try {
-        let endpoint = "";
-        if (userRole === "doctor") {
-          endpoint = `/api/doctor/hospitals?doctorId=${userId}`;
-        } else if (userRole === "patient") {
-          endpoint = `/api/patient/hospitals`;
-        }
-
-        if (!endpoint) return [];
-
-        console.log("-----------");
-        console.log(endpoint);
-        console.log("-----------");
-
-        const response = await fetch(endpoint);
-        console.log(response);
-        if (!response.ok) {
-          console.log("error");
-          throw new Error("Failed to fetch hospitals");
-        }
-
-        return response.json();
-      } catch (error) {
-        console.error("Error fetching hospitals:", error);
-        // Fallback data in case of error
-        if (userRole === "hospital") {
-          return [
-            {
-              id: userId,
-              name: "General Hospital",
-              type: "public",
-              municipality: "Central Municipality",
-              location: "123 Main Street",
-            },
-          ];
-        } else if (userRole === "doctor") {
-          return [
-            {
-              id: 1,
-              name: "General Hospital",
-              type: "public",
-              municipality: "Central Municipality",
-              location: "123 Main Street",
-            },
-            {
-              id: 2,
-              name: "Community Hospital",
-              type: "public",
-              municipality: "North Municipality",
-              location: "456 Park Avenue",
-            },
-          ];
-        } else if (userRole === "patient") {
-          return [
-            {
-              id: 1,
-              name: "General Hospital",
-              type: "public",
-              municipality: "Central Municipality",
-              location: "123 Main Street",
-            },
-          ];
-        }
-        return [];
-      }
-    },
     enabled: !!user,
+    queryFn: async () => {
+      let endpoint = "";
+      if (userRole === "doctor") {
+        endpoint = `/api/doctor/hospitals?doctorId=${userId}`;
+      } else if (userRole === "patient") {
+        endpoint = `/api/patient/hospitals`;
+      }
+      if (!endpoint) return [];
+
+      const response = await fetch(endpoint, { credentials: "include" });
+      if (!response.ok) {
+        console.error("Failed to fetch hospitals:", response.statusText);
+        throw new Error("Failed to fetch hospitals");
+      }
+
+      // doctor_hospitals_view returns fields: hospital_id, hospital_name, type, municipality, location
+      const raw = (await response.json()) as Array<{
+        hospital_id: number;
+        hospital_name: string;
+        type: string;
+        municipality: string;
+        location: string;
+      }>;
+
+      // Map raw view to our interface
+      return raw.map((r) => ({
+        id: r.hospital_id,
+        name: r.hospital_name,
+        type: r.type,
+        municipality: r.municipality,
+        location: r.location,
+      }));
+    },
   });
 
-  // Set the first hospital as selected if none is selected yet
+  // Auto-select first hospital once loaded
   useEffect(() => {
     if (
       hospitalQuery.isSuccess &&
-      Array.isArray(hospitalQuery.data) &&
+      hospitalQuery.data &&
       hospitalQuery.data.length > 0 &&
-      (!selectedHospital || userRole === "hospital")
+      selectedHospital === null
     ) {
-      // For hospital users, always select their own hospital ID (which is their user ID)
-      if (userRole === "hospital") {
-        setSelectedHospital(userId);
-      } else {
-        setSelectedHospital(hospitalQuery.data[0].id);
-      }
+      setSelectedHospital(hospitalQuery.data[0].id);
     }
   }, [
     hospitalQuery.data,
     hospitalQuery.isSuccess,
     selectedHospital,
     setSelectedHospital,
-    userRole,
-    userId,
   ]);
 
-  // When user changes selected hospital, invalidate queries that depend on hospital context
+  // Invalidate dependent queries on change
   useEffect(() => {
-    if (selectedHospital) {
-      // Invalidate queries that depend on hospital context
-      queryClient.invalidateQueries({
-        queryKey: ["appointments"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["patients"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctors"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["medicalRecords"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["prescriptions"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["parameters"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["reminders"],
-      });
+    if (selectedHospital !== null) {
+      queryClient.invalidateQueries(["recentPatients"]);
+      queryClient.invalidateQueries(["todayAppointments"]);
+      queryClient.invalidateQueries(["patientParameters"]);
     }
   }, [selectedHospital, queryClient]);
 
   return {
+    hospitals: hospitalQuery.data || [],
     selectedHospital,
     setSelectedHospital,
-    hospitals: hospitalQuery.data || [],
     isLoading: hospitalQuery.isLoading,
     isError: hospitalQuery.isError,
   };
