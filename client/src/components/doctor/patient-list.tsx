@@ -18,7 +18,7 @@ interface Patient {
 }
 
 export function PatientList() {
-  // 1) Fetch the queue
+  // 1) fetch only non-completed rows
   const {
     data: rows,
     isLoading,
@@ -28,13 +28,14 @@ export function PatientList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("queue")
-        .select("id, first_name, last_name, gender, status, time");
+        .select("id, first_name, last_name, gender, status, time")
+        .neq("status", "completed");
       if (error) throw error;
       return data!;
     },
   });
 
-  // 2) Local queue state
+  // 2) local queue state
   const [queue, setQueue] = useState<Patient[]>([]);
   useEffect(() => {
     if (!rows) return;
@@ -47,33 +48,27 @@ export function PatientList() {
       time: r.time,
       priority: r.time !== null,
     }));
-    // push completed to bottom, then priority
-    formatted.sort((a, b) => {
-      if (a.status === "completed" && b.status !== "completed") return 1;
-      if (b.status === "completed" && a.status !== "completed") return -1;
-      return Number(b.priority) - Number(a.priority);
-    });
+    formatted.sort((a, b) => Number(b.priority) - Number(a.priority));
     setQueue(formatted);
   }, [rows]);
 
-  // 3) Mutation to DELETE the row
-  const deleteMutation = useMutation({
+  // 3) mutation to mark completed
+  const completeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("queue").delete().eq("id", id);
+      const { error } = await supabase
+        .from("queue")
+        .update({ status: "completed" })
+        .eq("id", id);
       if (error) throw error;
     },
   });
 
-  // 4) “Next” removes from local state and fires delete
+  // 4) on Next: remove locally & fire update
   const handleNext = () => {
     if (queue.length === 0) return;
-
-    // remove the first patient
-    const [, ...rest] = queue;
-    setQueue(rest);
-
-    // delete from Supabase
-    deleteMutation.mutate(queue[0].id);
+    const [nextPatient, ...rest] = queue;
+    setQueue(rest); // optimistically remove
+    completeMutation.mutate(nextPatient.id);
   };
 
   return (
@@ -86,7 +81,7 @@ export function PatientList() {
             size="sm"
             onClick={handleNext}
             disabled={
-              queue.length === 0 || isLoading || deleteMutation.isLoading
+              queue.length === 0 || isLoading || completeMutation.isLoading
             }
           >
             Next
