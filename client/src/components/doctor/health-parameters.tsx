@@ -13,6 +13,7 @@ import {
   ActivitySquare,
   Droplet,
   Thermometer,
+  Scale, // ← new
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/../utils/supabaseClient";
@@ -257,7 +258,7 @@ export function HealthParameters({ hospital }: HealthParametersProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           {renderParameterCard(
             "blood_pressure",
             "Blood Pressure",
@@ -277,6 +278,11 @@ export function HealthParameters({ hospital }: HealthParametersProps) {
             "temperature",
             "Body Temperature",
             <Thermometer className="h-5 w-5" />
+          )}
+          {renderParameterCard(
+            "weight",
+            "Weight",
+            <Scale className="h-5 w-5" />
           )}
         </div>
         <div className="bg-neutral-lightest rounded-lg p-4 h-64 flex flex-col items-center justify-center">
