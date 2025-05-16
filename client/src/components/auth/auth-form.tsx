@@ -279,7 +279,7 @@ export function AuthForm({ type, onSuccess, onToggle }: AuthFormProps) {
           {/* <span className="material-icons text-primary text-3xl mr-2">
             favorite
           </span> */}
-          <img src="../../../public/logo.png" />
+          <img src="/logo.png" />
           <h1 className="text-2xl font-bold text-primary font-heading">Medi</h1>
         </div>
         <CardTitle className="text-2xl font-bold text-center">
