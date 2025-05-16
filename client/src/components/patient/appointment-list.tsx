@@ -7,8 +7,8 @@ import { useHospital } from "@/hooks/use-hospital";
 
 interface Doctor {
   id: number;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   specialty?: string;
 }
 
@@ -27,36 +27,36 @@ interface AppointmentListProps {
 }
 
 export function AppointmentList({ appointments }: AppointmentListProps) {
-  const [_, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const { selectedHospital } = useHospital();
+
+  const getDaysUntil = (dateString: string): number => {
+    const appt = new Date(dateString);
+    const today = new Date();
+    appt.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil(
+      (appt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  };
 
   const getStatusBadge = (status: string, daysUntil?: number) => {
     if (daysUntil !== undefined) {
-      if (daysUntil <= 1) {
+      if (daysUntil <= 0)
         return <Badge className="bg-red-100 text-red-800">Today</Badge>;
-      } else if (daysUntil <= 3) {
-        return <Badge className="bg-yellow-100 text-yellow-800">In {daysUntil} days</Badge>;
-      } else {
-        return <Badge className="bg-neutral-light text-neutral-dark">In {daysUntil} days</Badge>;
-      }
+      if (daysUntil <= 3)
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">
+            In {daysUntil} days
+          </Badge>
+        );
+      return (
+        <Badge className="bg-neutral-light text-neutral-dark">
+          In {daysUntil} days
+        </Badge>
+      );
     }
-    
     return <Badge variant="outline">{status}</Badge>;
-  };
-
-  const getDaysUntil = (dateString: string): number => {
-    const appointmentDate = new Date(dateString);
-    const today = new Date();
-    
-    // Reset time part for accurate day comparison
-    appointmentDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    
-    // Calculate the difference in days
-    const diffTime = appointmentDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays;
   };
 
   return (
@@ -79,12 +79,11 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
       <CardContent>
         <div className="space-y-3">
           {appointments.length > 0 ? (
-            appointments.map((appointment) => {
-              const daysUntil = getDaysUntil(appointment.date);
-              
+            appointments.map((a) => {
+              const daysUntil = getDaysUntil(a.date);
               return (
-                <div 
-                  key={appointment.id} 
+                <div
+                  key={a.id}
                   className="flex p-3 border border-neutral-light rounded-lg hover:bg-neutral-lightest"
                 >
                   <div className="p-2 bg-primary-light bg-opacity-10 rounded-lg text-primary flex-shrink-0 mr-3">
@@ -93,16 +92,20 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
                   <div className="flex-1">
                     <div className="flex justify-between">
                       <p className="font-medium">
-                        Dr. {appointment.doctor.lastName} - {appointment.title}
+                        Dr. {a.doctor.last_name} — {a.title}
                       </p>
-                      {getStatusBadge(appointment.status, daysUntil)}
+                      {getStatusBadge(a.status, daysUntil)}
                     </div>
                     <p className="text-sm text-neutral-dark">
-                      {formatDate(appointment.date)} - {formatTime(appointment.date)}
+                      {formatDate(a.date)} — {formatTime(a.date)}
                     </p>
                     <div className="mt-2 flex space-x-2">
-                      <Button variant="outline" size="sm">Reschedule</Button>
-                      <Button variant="outline" size="sm">Cancel</Button>
+                      <Button variant="outline" className="invisible" size="sm">
+                        Reschedule
+                      </Button>
+                      <Button variant="outline" className="invisible" size="sm">
+                        Cancel
+                      </Button>
                     </div>
                   </div>
                 </div>
