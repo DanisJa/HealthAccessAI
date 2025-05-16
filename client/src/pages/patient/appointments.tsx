@@ -56,20 +56,11 @@ export default function PatientAppointments() {
   const [appointmentTitle, setAppointmentTitle] = useState("");
   const [appointmentDescription, setAppointmentDescription] = useState("");
   const { toast } = useToast();
-
-  // const supabase = useSupabaseClient();
   const { user } = useAuth(); // Ako koristiš supabase-auth-helpers
 
   const [filterDoctor, setFilterDoctor] = useState<string>("");
-  const [filterHospital, setFilterHospital] = useState<string>("");
+  const [filterHospital, setFilterHospital] = useState<string>("all-hospitals");
 
-  // const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
-  //   queryKey: [
-  //     "/api/patient/appointments",
-  //     tab,
-  //     date ? format(date, "yyyy-MM-dd") : null,
-  //   ],
-  // });
   const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
     queryKey: [
       "appointments",
@@ -93,13 +84,15 @@ export default function PatientAppointments() {
         .lt("date", `${selectedDate}T23:59:59`);
 
       if (tab === "upcoming")
-        // query = query.in("status", ["scheduled", "pending", "approved"]);
         query = query.in("status", ["pending", "approved"]);
       if (tab === "completed") query = query.eq("status", "completed");
       if (tab === "cancelled") query = query.eq("status", "cancelled");
 
       if (filterDoctor) query = query.eq("doctor_id", filterDoctor);
-      if (filterHospital) query = query.eq("hospital_id", filterHospital);
+      // if (filterHospital) query = query.eq("hospital_id", filterHospital);
+      if (filterHospital && filterHospital !== "all-hospitals") {
+        query = query.eq("hospital_id", filterHospital);
+      }
 
       const { data, error } = await query;
 
@@ -134,38 +127,6 @@ export default function PatientAppointments() {
     },
   });
 
-  // const createAppointmentMutation = useMutation({
-  //   mutationFn: async (data: any) => {
-  //     const res = await apiRequest("POST", "/api/patient/appointments", data);
-  //     return res.json();
-  //   },
-  //   onSuccess: () => {
-  //     toast({
-  //       title: "Appointment scheduled",
-  //       description: "Your appointment has been successfully scheduled.",
-  //     });
-  //     setIsNewAppointmentOpen(false);
-  //     // Reset form fields
-  //     setSelectedDoctor("");
-  //     setAppointmentTime("");
-  //     setAppointmentTitle("");
-  //     setAppointmentDescription("");
-
-  //     // Refresh appointments data
-  //     queryClient.invalidateQueries({
-  //       queryKey: ["/api/patient/appointments"],
-  //     });
-  //   },
-  //   onError: (error) => {
-  //     toast({
-  //       title: "Failed to schedule appointment",
-  //       description:
-  //         error instanceof Error ? error.message : "An error occurred",
-  //       variant: "destructive",
-  //     });
-  //   },
-  // });
-
   const handleCreateAppointment = async () => {
     let doctorIdToUse = selectedDoctor;
 
@@ -189,7 +150,7 @@ export default function PatientAppointments() {
     }
 
     // Ako je državna bolnica, automatski izaberi jednog doktora
-    if (selectedHospitalType === "state") {
+    if (selectedHospitalType === "public") {
       const { data: stateDoctors, error } = await supabase
         .from("hospital_doctors")
         .select("doctor_id")
@@ -225,7 +186,6 @@ export default function PatientAppointments() {
         description: appointmentDescription,
         duration: 30,
         type: "In-person",
-        // created_by: user?.id,
         created_by: parseInt(selectedHospitalId),
         status: "pending",
       },
@@ -338,18 +298,18 @@ export default function PatientAppointments() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-4 mb-4">
-                  <Select value={filterDoctor} onValueChange={setFilterDoctor}>
+                  {/* <Select value={filterDoctor} onValueChange={setFilterDoctor}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by doctor" />
                     </SelectTrigger>
                     <SelectContent>
                       {doctors?.map((d: any) => (
                         <SelectItem key={d.id} value={d.id.toString()}>
-                          Dr. {d.firstName} {d.lastName}
+                          Dr. {d.first_name} {d.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </Select> */}
 
                   <Select
                     value={filterHospital}
@@ -359,6 +319,9 @@ export default function PatientAppointments() {
                       <SelectValue placeholder="Filter by hospital" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all-hospitals">
+                        All Hospitals
+                      </SelectItem>
                       {hospitals?.map((h: any) => (
                         <SelectItem key={h.id} value={h.id.toString()}>
                           {h.name}
@@ -416,7 +379,7 @@ export default function PatientAppointments() {
                                     "h:mm a"
                                   )}
                                 </p>
-                                {getStatusBadge(appointment.status)}
+                                {/* {getStatusBadge(appointment.status)} */}
                               </div>
                               <p className="text-sm text-neutral-600">
                                 Dr. {appointment.doctor.firstName}{" "}
@@ -612,20 +575,6 @@ export default function PatientAppointments() {
                         <SelectValue placeholder="Choose a doctor" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* {doctors
-                        ?.filter(
-                          (doc: any) =>
-                            doc.hospital_id === parseInt(selectedHospitalId) // ako koristiš join
-                        )
-                        .map((doctor: any) => (
-                          <SelectItem
-                            key={doctor.id}
-                            value={doctor.id.toString()}
-                          >
-                            Dr. {doctor.first_name} {doctor.last_name}
-                            {doctor.specialty ? ` - ${doctor.specialty}` : ""}
-                          </SelectItem>
-                        ))} */}
                         {hospitalDoctors.map((doctor: any) => (
                           <SelectItem
                             key={doctor.id}
