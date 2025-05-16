@@ -4,13 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useHospital } from "@/hooks/use-hospital";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/../utils/supabaseClient";
+import { useAuth } from "@/hooks/use-auth";
+import { navigate } from "wouter/use-browser-location";
 type ParameterType = "blood_pressure" | "weight" | "blood_glucose";
 
 interface Parameter {
@@ -22,48 +37,46 @@ interface Parameter {
 }
 
 export function HealthTracking() {
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [parameterType, setParameterType] = useState<ParameterType>("blood_pressure");
+  const [parameterType, setParameterType] =
+    useState<ParameterType>("blood_pressure");
   const [parameterValue, setParameterValue] = useState("");
   const [parameterUnit, setParameterUnit] = useState("mmHg");
 
   const { toast } = useToast();
   const { selectedHospital } = useHospital();
 
-  const { data: parameters, isLoading } = useQuery({
-    queryKey: ['/api/patient/parameters/recent', selectedHospital?.id],
+  const { data: parameters, isLoading } = useQuery<Parameter[]>({
+    queryKey: ["parameters", user?.id, selectedHospital?.id],
+    enabled: !!user,
     queryFn: async () => {
-      const url = selectedHospital 
-        ? `/api/patient/parameters/recent?hospitalId=${selectedHospital.id}`
-        : '/api/patient/parameters/recent';
-      return apiRequest(url);
-    },
-  });
+      // if no user yet, return empty
+      if (!user) return [];
 
-  const addParameterMutation = useMutation({
-    mutationFn: async (data: any) => {
-      // Add hospital ID to parameters if a hospital is selected
-      if (selectedHospital) {
-        data.hospitalId = selectedHospital.id;
+      // build the base query
+      let builder = supabase
+        .from("parameters")
+        .select("id, type, value, unit, recorded_at")
+        .eq("patient_id", user.id)
+        .order("recorded_at", { ascending: false });
+
+      // optionally filter by hospital
+      if (selectedHospital?.id) {
+        builder = builder.eq("hospital_id", selectedHospital.id);
       }
-      const res = await apiRequest('POST', '/api/patient/parameters', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Parameter added successfully",
-        description: "Your health parameter has been recorded.",
-      });
-      setIsDialogOpen(false);
-      setParameterValue("");
-      queryClient.invalidateQueries({ queryKey: ['/api/patient/parameters/recent', selectedHospital?.id] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to add parameter",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+
+      const { data, error } = await builder;
+      if (error) throw error;
+
+      // map snake_case → camelCase
+      return data.map((p) => ({
+        id: p.id,
+        type: p.type,
+        value: p.value,
+        unit: p.unit,
+        recordedAt: p.recorded_at,
+      }));
     },
   });
 
@@ -116,6 +129,10 @@ export function HealthTracking() {
         return "Slightly above target";
       case "blood_glucose":
         return "Normal range";
+      case "heart_rate":
+        return "Slightly above target";
+      case "temperature":
+        return "Slightly above target";
       default:
         return "Recorded";
     }
@@ -123,29 +140,34 @@ export function HealthTracking() {
 
   const renderParameterCard = (type: string, title: string) => {
     const param = getLatestParameter(type);
-    
+
     return (
       <div className="bg-neutral-lightest p-3 rounded-lg">
         <div className="flex justify-between items-center mb-1">
           <h4 className="font-medium text-neutral-darkest">{title}</h4>
           <span className="text-xs text-neutral-dark">
-            {param ? `Last updated: ${new Date(param.recordedAt).toLocaleDateString()}` : 'Not recorded'}
+            {param
+              ? `Last updated: ${new Date(
+                  param.recordedAt
+                ).toLocaleDateString()}`
+              : "Not recorded"}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <div className="text-2xl font-semibold">
             {param ? (
               <>
-                {param.value} <span className="text-sm text-neutral-dark">{param.unit}</span>
+                {param.value}{" "}
+                <span className="text-sm text-neutral-dark">{param.unit}</span>
               </>
             ) : (
               "No data"
             )}
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-primary" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-primary invisible"
             onClick={() => {
               setParameterType(type as ParameterType);
               setParameterUnit(getUnitForType(type as ParameterType));
@@ -158,7 +180,10 @@ export function HealthTracking() {
         {param && (
           <>
             <div className="w-full bg-neutral-light rounded-full h-1.5 mt-2">
-              <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "70%" }}></div>
+              <div
+                className="bg-green-500 h-1.5 rounded-full"
+                style={{ width: "70%" }}
+              ></div>
             </div>
             <div className="text-xs text-neutral-dark mt-1">
               {getStatusText(param.type, param.value)}
@@ -174,7 +199,7 @@ export function HealthTracking() {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle>My Health Parameters</CardTitle>
-          <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+          <Button size="sm" onClick={() => navigate("/patient/health")}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New
           </Button>
         </div>
@@ -184,6 +209,8 @@ export function HealthTracking() {
           {renderParameterCard("blood_pressure", "Blood Pressure")}
           {renderParameterCard("weight", "Weight")}
           {renderParameterCard("blood_glucose", "Blood Glucose")}
+          {renderParameterCard("heart_rate", "Heart Rate")}
+          {renderParameterCard("temperature", "Temperature")}
         </div>
       </CardContent>
 
@@ -195,61 +222,12 @@ export function HealthTracking() {
               Record your latest health measurement to track your progress.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="parameter-type">Parameter Type</Label>
-              <Select 
-                value={parameterType} 
-                onValueChange={(value) => handleParameterTypeChange(value as ParameterType)}
-              >
-                <SelectTrigger id="parameter-type">
-                  <SelectValue placeholder="Select parameter type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="blood_pressure">Blood Pressure</SelectItem>
-                  <SelectItem value="weight">Weight</SelectItem>
-                  <SelectItem value="blood_glucose">Blood Glucose</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="parameter-value">Value</Label>
-                <Input 
-                  id="parameter-value" 
-                  value={parameterValue} 
-                  onChange={(e) => setParameterValue(e.target.value)} 
-                  placeholder={parameterType === "blood_pressure" ? "120/80" : "70"}
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="parameter-unit">Unit</Label>
-                <Input 
-                  id="parameter-unit" 
-                  value={parameterUnit} 
-                  readOnly 
-                />
-              </div>
-            </div>
-          </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDialogOpen(false)}
-              disabled={addParameterMutation.isPending}
-            >
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleAddParameter}
-              disabled={addParameterMutation.isPending}
-            >
-              {addParameterMutation.isPending ? "Adding..." : "Add Parameter"}
-            </Button>
+            <Button onClick={handleAddParameter}></Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
