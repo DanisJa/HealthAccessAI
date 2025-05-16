@@ -75,6 +75,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           label: "Settings",
           icon: <Settings className="h-5 w-5" />,
         },
+        {
+          href: "/patient/triage",
+          label: "Online Triage",
+          icon: <Stethoscope className="h-5 w-5" />,
+        },
       ];
     } else if (user.role === "doctor") {
       return [
