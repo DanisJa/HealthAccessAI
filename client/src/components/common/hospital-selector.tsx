@@ -21,11 +21,7 @@ export function HospitalSelector() {
   const { hospitals, selectedHospital, setSelectedHospital, isLoading } =
     useHospital();
 
-  console.log(hospitals);
-
-  const selectedHospitalData = hospitals?.find(
-    (hospital: any) => hospital.id === selectedHospital
-  );
+  const selectedData = hospitals.find((h) => h.id === selectedHospital) || null;
 
   if (isLoading) {
     return (
@@ -67,9 +63,7 @@ export function HospitalSelector() {
           <div className="flex items-center">
             <Building className="mr-2 h-4 w-4" />
             <span className="text-xs truncate">
-              {selectedHospitalData
-                ? selectedHospitalData.name
-                : "Select hospital"}
+              {selectedData ? selectedData.name : "Select hospital"}
             </span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -80,12 +74,12 @@ export function HospitalSelector() {
           <CommandInput placeholder="Search hospital..." className="h-9" />
           <CommandEmpty>No hospital found.</CommandEmpty>
           <CommandGroup>
-            {hospitals.map((hospital: any) => (
+            {hospitals.map((hospital) => (
               <CommandItem
                 key={hospital.id}
-                value={hospital.name}
-                onSelect={() => {
-                  setSelectedHospital(hospital.id);
+                value={hospital.id.toString()}
+                onSelect={(value) => {
+                  setSelectedHospital(Number(value));
                   setOpen(false);
                 }}
               >
@@ -97,7 +91,7 @@ export function HospitalSelector() {
                       : "opacity-0"
                   )}
                 />
-                <span className="text-xs">{hospital.hospital_name}</span>
+                <span className="text-xs">{hospital.name}</span>
               </CommandItem>
             ))}
           </CommandGroup>
