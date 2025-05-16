@@ -10,10 +10,10 @@ interface Medication {
   medication: string;
   dosage: string;
   frequency: string;
-  startDate: string;
-  endDate?: string;
+  start_date: string;
+  end_date?: string;
   status: string;
-  refillDue?: number;
+  refill_due?: number;
 }
 
 interface MedicationListProps {
@@ -22,7 +22,7 @@ interface MedicationListProps {
 
 export function MedicationList({ medications }: MedicationListProps) {
   const { selectedHospital } = useHospital();
-  
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -35,7 +35,11 @@ export function MedicationList({ medications }: MedicationListProps) {
               </p>
             )}
           </div>
-          <Button variant="link" size="sm" onClick={() => window.location.href = "/patient/medications"}>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => (window.location.href = "/patient/medications")}
+          >
             View history
           </Button>
         </div>
@@ -43,9 +47,9 @@ export function MedicationList({ medications }: MedicationListProps) {
       <CardContent>
         <div className="space-y-3">
           {medications.length > 0 ? (
-            medications.map((medication) => (
-              <div 
-                key={medication.id} 
+            medications.map((med) => (
+              <div
+                key={med.id}
                 className="flex p-3 border border-neutral-light rounded-lg hover:bg-neutral-lightest"
               >
                 <div className="p-2 bg-primary-light bg-opacity-10 rounded-lg text-primary flex-shrink-0 mr-3">
@@ -54,17 +58,23 @@ export function MedicationList({ medications }: MedicationListProps) {
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <div>
-                      <p className="font-medium">{medication.medication}</p>
-                      <p className="text-sm text-neutral-dark">{medication.dosage}, {medication.frequency}</p>
+                      <p className="font-medium">{med.medication}</p>
+                      <p className="text-sm text-neutral-dark">
+                        {med.dosage}, {med.frequency}
+                      </p>
                     </div>
                     <Badge className="h-fit bg-primary bg-opacity-10 text-primary">
-                      {medication.status}
+                      {med.status}
                     </Badge>
                   </div>
-                  {medication.refillDue && (
+                  <p className="text-xs text-neutral-dark mt-1">
+                    Starts {formatDate(med.start_date)}
+                    {med.end_date && ` — Ends ${formatDate(med.end_date)}`}
+                  </p>
+                  {med.refill_due !== undefined && (
                     <div className="mt-1 flex items-center text-xs text-neutral-dark">
                       <CalendarClock className="text-secondary mr-1 h-4 w-4" />
-                      <span>Refill due in {medication.refillDue} days</span>
+                      <span>Refill due in {med.refill_due} days</span>
                     </div>
                   )}
                 </div>

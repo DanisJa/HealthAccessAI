@@ -11,57 +11,109 @@ import { ReminderList } from "@/components/patient/reminder-list";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { Calendar, PillIcon, Bell, FileText, Building2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-
+import { supabase } from "@/../utils/supabaseClient";
+import { Link } from "react-router-dom";
 export default function PatientDashboard() {
   const { user } = useAuth();
   const { selectedHospital } = useHospital();
+  const patientId = user?.id!;
 
+  // 1) Stats
   const { data: stats, isLoading: isStatsLoading } = useQuery({
-    queryKey: ['/api/patient/stats', selectedHospital?.id],
+    queryKey: ["patientStats", patientId, selectedHospital?.id],
+    enabled: !!patientId,
     queryFn: async () => {
-      const url = selectedHospital 
-        ? `/api/patient/stats?hospitalId=${selectedHospital.id}`
-        : '/api/patient/stats';
-      return apiRequest(url);
+      const { count: upcomingAppointments = 0 } = await supabase
+        .from("appointments")
+        .select("*", { head: true, count: "exact" })
+        .eq("patient_id", patientId)
+        .gte("date", new Date().toISOString());
+
+      const { count: activeMedications = 0 } = await supabase
+        .from("prescriptions")
+        .select("*", { head: true, count: "exact" })
+        .eq("patient_id", patientId)
+        .eq("status", "active");
+
+      const today = new Date().toISOString().split("T")[0];
+      const { count: remindersToday = 0 } = await supabase
+        .from("reminders")
+        .select("*", { head: true, count: "exact" })
+        .eq("user_id", patientId)
+        .gte("due_date", today)
+        .lt(
+          "due_date",
+          new Date(Date.now() + 86400000).toISOString().split("T")[0]
+        );
+
+      const { count: newReports = 0 } = await supabase
+        .from("medical_reports")
+        .select("*", { head: true, count: "exact" })
+        .eq("patient_id", patientId)
+        .eq("is_pending", false);
+
+      return {
+        upcomingAppointments,
+        activeMedications,
+        remindersToday,
+        newReports,
+      };
     },
-    enabled: !!user,
   });
 
-  const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
-    queryKey: ['/api/patient/appointments/upcoming', selectedHospital?.id],
+  // 2) Upcoming Appointments
+  const { data: appointments = [], isLoading: isAppointmentsLoading } =
+    useQuery({
+      queryKey: ["patientAppointments", patientId, selectedHospital?.id],
+      enabled: !!patientId,
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select(`id, date, title, doctor:doctor_id ( last_name )`)
+          .eq("patient_id", patientId)
+          .gte("date", new Date().toISOString())
+          .order("date", { ascending: true });
+        if (error) throw error;
+        return data!;
+      },
+    });
+
+  // 3) Active Medications
+  const { data: medications = [], isLoading: isMedicationsLoading } = useQuery({
+    queryKey: ["patientMedications", patientId, selectedHospital?.id],
+    enabled: !!patientId,
     queryFn: async () => {
-      const url = selectedHospital 
-        ? `/api/patient/appointments/upcoming?hospitalId=${selectedHospital.id}`
-        : '/api/patient/appointments/upcoming';
-      return apiRequest(url);
+      const { data, error } = await supabase
+        .from("prescriptions")
+        .select("*")
+        .eq("patient_id", patientId)
+        .eq("status", "active")
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return data!;
     },
-    enabled: !!user,
   });
 
-  const { data: medications, isLoading: isMedicationsLoading } = useQuery({
-    queryKey: ['/api/patient/medications', selectedHospital?.id],
+  // 4) Reminders
+  const { data: reminders = [], isLoading: isRemindersLoading } = useQuery({
+    queryKey: ["patientReminders", patientId, selectedHospital?.id],
+    enabled: !!patientId,
     queryFn: async () => {
-      const url = selectedHospital 
-        ? `/api/patient/medications?hospitalId=${selectedHospital.id}`
-        : '/api/patient/medications';
-      return apiRequest(url);
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .eq("user_id", patientId)
+        .order("due_date", { ascending: true });
+      if (error) throw error;
+      return data!;
     },
-    enabled: !!user,
   });
 
-  const { data: reminders, isLoading: isRemindersLoading } = useQuery({
-    queryKey: ['/api/patient/reminders', selectedHospital?.id],
-    queryFn: async () => {
-      const url = selectedHospital 
-        ? `/api/patient/reminders?hospitalId=${selectedHospital.id}`
-        : '/api/patient/reminders';
-      return apiRequest(url);
-    },
-    enabled: !!user,
-  });
-
-  const isLoading = isStatsLoading || isAppointmentsLoading || isMedicationsLoading || isRemindersLoading;
+  const isLoading =
+    isStatsLoading ||
+    isAppointmentsLoading ||
+    isMedicationsLoading ||
+    isRemindersLoading;
 
   if (isLoading) {
     return (
@@ -75,28 +127,33 @@ export default function PatientDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Welcome Section */}
+      {/* Welcome */}
       <WelcomeCard
         role="patient"
-        name={user?.firstName || ''}
+        name={user?.first_name || ""}
         stats={{
-          nextAppointment: appointments && appointments.length > 0 ? appointments[0].date : null,
-          doctor: appointments && appointments.length > 0 ? `Dr. ${appointments[0].doctor.lastName}` : null
+          nextAppointment:
+            appointments.length > 0 ? appointments[0].date : null,
+          doctor:
+            appointments.length > 0
+              ? `Dr. ${appointments[0].doctor.last_name}`
+              : null,
         }}
         imgUrl="https://images.unsplash.com/photo-1505751172876-fa1923c5c528?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=400&q=80"
       />
-      
+
       {/* Hospital Info */}
       {selectedHospital && (
         <div className="flex items-center gap-2 mb-4 p-2 bg-muted/20 rounded-md">
           <Building2 className="h-5 w-5 text-primary" />
           <span className="text-sm font-medium">
-            Currently viewing: {selectedHospital.name} ({selectedHospital.type}) - {selectedHospital.municipality}
+            Currently viewing: {selectedHospital.name} ({selectedHospital.type})
+            — {selectedHospital.municipality}
           </span>
         </div>
       )}
 
-      {/* Patient Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatsCard
           title="Upcoming Appointments"
@@ -124,19 +181,19 @@ export default function PatientDashboard() {
         />
       </div>
 
-      {/* Health Tracking & Medications */}
+      {/* Tracking & Meds */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <HealthTracking />
-        <MedicationList medications={medications || []} />
+        <MedicationList medications={medications} />
       </div>
 
-      {/* Upcoming Appointments & Reminders */}
+      {/* Appts & Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <AppointmentList appointments={appointments || []} />
-        <ReminderList reminders={reminders || []} />
+        <AppointmentList appointments={appointments} />
+        <ReminderList reminders={reminders} />
       </div>
 
-      {/* Chat Widget */}
+      {/* Chat */}
       <ChatWidget role="patient" />
     </DashboardLayout>
   );
