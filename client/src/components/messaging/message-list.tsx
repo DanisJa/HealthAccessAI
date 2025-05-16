@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/../utils/supabaseClient";
 import {
   Pagination,
   PaginationContent,
@@ -19,23 +20,22 @@ import { Search, Mail, MailOpen } from "lucide-react";
 
 interface Message {
   id: number;
-  senderId: number;
-  recipientId: number;
-  subject: string;
+  sender_id: string;
+  receiver_id: string;
+  subject?: string;
   content: string;
   status: "unread" | "read" | "archived";
-  parentId: number | null;
-  createdAt: string;
+  created_at: string;
   sender: {
-    id: number;
-    firstName: string;
-    lastName: string;
+    id: string;
+    first_name: string;
+    last_name: string;
     role: string;
   };
   recipient: {
-    id: number;
-    firstName: string;
-    lastName: string;
+    id: string;
+    first_name: string;
+    last_name: string;
     role: string;
   };
 }
@@ -49,19 +49,42 @@ export function MessageList({ type }: MessageListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const { user } = useAuth();
   const pageSize = 10;
-  
-  const endpoint = type === "inbox" 
-    ? `/api/messages?tab=${type}&page=${page}&search=${searchTerm}`
-    : `/api/messages/sent?page=${page}&search=${searchTerm}`;
-    
+
+  const fetchMessages = async () => {
+    if (!user) return [];
+
+    let query = supabase
+      .from('messages_with_users')
+      .select('*')
+      .order('id', { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+
+    if (type === 'inbox') {
+      query = query.eq('reciever_id', user.id);
+    } else {
+      query = query.eq('sender_id', user.id);
+    }
+
+    if (searchTerm) {
+      query = query.ilike('subject', `%${searchTerm}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
+
+    return data;
+  };
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: [endpoint],
+    queryKey: [type, page, searchTerm, user?.id],
+    queryFn: fetchMessages,
     enabled: !!user,
+    refetchInterval: 500, // refetch every 10 seconds
   });
-  
   const messages: Message[] = Array.isArray(data) ? data : [];
   const totalPages = Math.ceil(messages.length / pageSize);
-  
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -82,11 +105,11 @@ export function MessageList({ type }: MessageListProps) {
       </div>
     );
   }
-  
+
   if (isError) {
     return <div>Error loading messages</div>;
   }
-  
+
   if (messages.length === 0) {
     return (
       <div className="text-center p-8">
@@ -94,7 +117,7 @@ export function MessageList({ type }: MessageListProps) {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -106,7 +129,7 @@ export function MessageList({ type }: MessageListProps) {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      
+
       {messages.map((message: Message) => (
         <Link key={message.id} href={`/messages/thread/${message.id}`}>
           <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -115,9 +138,9 @@ export function MessageList({ type }: MessageListProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium">
-                      {type === "inbox" 
-                        ? `${message.sender.firstName} ${message.sender.lastName}`
-                        : `${message.recipient.firstName} ${message.recipient.lastName}`
+                      {type === "inbox"
+                        ? `${message.sender.first_name} ${message.sender.last_name}`
+                        : `${message.recipient.first_name} ${message.recipient.last_name}`
                       }
                     </h3>
                     {message.status === "unread" && type === "inbox" && (
@@ -135,7 +158,7 @@ export function MessageList({ type }: MessageListProps) {
                     <MailOpen className="h-4 w-4 text-muted-foreground" />
                   )}
                   <span className="text-xs text-muted-foreground">
-                    {new Date(message.createdAt).toLocaleDateString()}
+                    {new Date(message.created_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -146,13 +169,13 @@ export function MessageList({ type }: MessageListProps) {
           </Card>
         </Link>
       ))}
-      
+
       {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => setPage(page > 1 ? page - 1 : 1)}
                 disabled={page === 1}
@@ -160,7 +183,7 @@ export function MessageList({ type }: MessageListProps) {
                 <PaginationPrevious className="h-4 w-4" />
               </Button>
             </PaginationItem>
-            
+
             {[...Array(totalPages)].map((_, i) => (
               <PaginationItem key={i}>
                 <PaginationLink
@@ -171,10 +194,10 @@ export function MessageList({ type }: MessageListProps) {
                 </PaginationLink>
               </PaginationItem>
             ))}
-            
+
             <PaginationItem>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
                 disabled={page === totalPages}
