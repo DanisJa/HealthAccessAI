@@ -63,14 +63,15 @@ export function MessageThread({ messageId }: MessageThreadProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
+  // TODO use supabase
   const { data, isLoading, isError } = useQuery({
     queryKey: [`/api/messages/thread/${messageId}`],
     enabled: !!user && !!messageId,
   });
-  
+
   const messages: Message[] = Array.isArray(data) ? data : [];
-  
+
   // Mark messages as read when thread is opened
   const markAsRead = useMutation({
     mutationFn: async (messageId: number) => {
@@ -87,20 +88,20 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/messages/thread/${messageId}`] });
     },
   });
-  
+
   // Find unread messages sent to the current user and mark them as read
   useEffect(() => {
     if (messages && user) {
-      const unreadMessages = messages.filter((message: Message) => 
+      const unreadMessages = messages.filter((message: Message) =>
         message.status === "unread" && message.recipientId === user.id
       );
-      
+
       unreadMessages.forEach((message: Message) => {
         markAsRead.mutate(message.id);
       });
     }
   }, [messages, user]);
-  
+
   // Form for replying to messages
   const form = useForm<ReplyFormValues>({
     resolver: zodResolver(replyFormSchema),
@@ -108,7 +109,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       content: "",
     },
   });
-  
+
   // Mutation for sending a reply
   const sendReply = useMutation({
     mutationFn: async (data: any) => {
@@ -136,16 +137,16 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       });
     },
   });
-  
+
   const onSubmit = (values: ReplyFormValues) => {
     if (!messages || messages.length === 0) return;
-    
+
     // Determine the recipient (the other party in the conversation)
     const originalMessage = messages[0];
     const recipientId = originalMessage.senderId === user?.id
       ? originalMessage.recipientId
       : originalMessage.senderId;
-    
+
     sendReply.mutate({
       recipientId,
       subject: `Re: ${originalMessage.subject}`,
@@ -153,7 +154,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       parentId: messageId,
     });
   };
-  
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -181,7 +182,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       </div>
     );
   }
-  
+
   if (isError || !messages || messages.length === 0) {
     return (
       <Card>
@@ -193,10 +194,10 @@ export function MessageThread({ messageId }: MessageThreadProps) {
       </Card>
     );
   }
-  
+
   // Determine the conversation subject from the first message
   const conversationSubject = messages[0].subject;
-  
+
   return (
     <div className="space-y-6">
       <Card>
@@ -209,7 +210,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
               const isUserSender = message.senderId === user?.id;
               const initials = `${message.sender.firstName.charAt(0)}${message.sender.lastName.charAt(0)}`;
               const formattedDate = new Date(message.createdAt).toLocaleString();
-              
+
               return (
                 <div key={message.id} className={`flex gap-4 ${isUserSender ? 'flex-row-reverse' : ''}`}>
                   <Avatar>
@@ -229,12 +230,11 @@ export function MessageThread({ messageId }: MessageThreadProps) {
                         {formattedDate}
                       </span>
                     </div>
-                    <div 
-                      className={`p-4 rounded-lg ${
-                        isUserSender 
-                          ? 'bg-primary text-primary-foreground ml-auto' 
+                    <div
+                      className={`p-4 rounded-lg ${isUserSender
+                          ? 'bg-primary text-primary-foreground ml-auto'
                           : 'bg-muted mr-auto'
-                      }`}
+                        }`}
                       style={{ maxWidth: '80%' }}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
@@ -246,7 +246,7 @@ export function MessageThread({ messageId }: MessageThreadProps) {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -272,8 +272,8 @@ export function MessageThread({ messageId }: MessageThreadProps) {
               />
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="flex items-center gap-2"
                 disabled={sendReply.isPending}
               >
