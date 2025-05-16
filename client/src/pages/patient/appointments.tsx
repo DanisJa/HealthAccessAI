@@ -56,20 +56,11 @@ export default function PatientAppointments() {
   const [appointmentTitle, setAppointmentTitle] = useState("");
   const [appointmentDescription, setAppointmentDescription] = useState("");
   const { toast } = useToast();
-
-  // const supabase = useSupabaseClient();
   const { user } = useAuth(); // Ako koristiš supabase-auth-helpers
 
   const [filterDoctor, setFilterDoctor] = useState<string>("");
-  const [filterHospital, setFilterHospital] = useState<string>("");
+  const [filterHospital, setFilterHospital] = useState<string>("all-hospitals");
 
-  // const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
-  //   queryKey: [
-  //     "/api/patient/appointments",
-  //     tab,
-  //     date ? format(date, "yyyy-MM-dd") : null,
-  //   ],
-  // });
   const { data: appointments, isLoading: isAppointmentsLoading } = useQuery({
     queryKey: [
       "appointments",
@@ -93,13 +84,15 @@ export default function PatientAppointments() {
         .lt("date", `${selectedDate}T23:59:59`);
 
       if (tab === "upcoming")
-        // query = query.in("status", ["scheduled", "pending", "approved"]);
         query = query.in("status", ["pending", "approved"]);
       if (tab === "completed") query = query.eq("status", "completed");
       if (tab === "cancelled") query = query.eq("status", "cancelled");
 
       if (filterDoctor) query = query.eq("doctor_id", filterDoctor);
-      if (filterHospital) query = query.eq("hospital_id", filterHospital);
+      // if (filterHospital) query = query.eq("hospital_id", filterHospital);
+      if (filterHospital && filterHospital !== "all-hospitals") {
+        query = query.eq("hospital_id", filterHospital);
+      }
 
       const { data, error } = await query;
 
@@ -134,42 +127,30 @@ export default function PatientAppointments() {
     },
   });
 
-  const createAppointmentMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/patient/appointments", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Appointment scheduled",
-        description: "Your appointment has been successfully scheduled.",
-      });
-      setIsNewAppointmentOpen(false);
-      // Reset form fields
-      setSelectedDoctor("");
-      setAppointmentTime("");
-      setAppointmentTitle("");
-      setAppointmentDescription("");
-
-      // Refresh appointments data
-      queryClient.invalidateQueries({
-        queryKey: ["/api/patient/appointments"],
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to schedule appointment",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleCreateAppointment = async () => {
     let doctorIdToUse = selectedDoctor;
 
-    if (selectedHospitalType === "state") {
+    if (!selectedHospitalId || !appointmentTime || !date || !appointmentTitle) {
+      toast({
+        title: "Incomplete form",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ako je privatna bolnica, doktor mora biti ručno izabran
+    if (selectedHospitalType === "private" && !selectedDoctor) {
+      toast({
+        title: "Incomplete form",
+        description: "Please select a doctor for private hospitals.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ako je državna bolnica, automatski izaberi jednog doktora
+    if (selectedHospitalType === "public") {
       const { data: stateDoctors, error } = await supabase
         .from("hospital_doctors")
         .select("doctor_id")
@@ -188,29 +169,50 @@ export default function PatientAppointments() {
       doctorIdToUse = stateDoctors[0].doctor_id;
     }
 
-    if (!doctorIdToUse || !appointmentTime || !date || !appointmentTitle) {
+    const appointmentDate = new Date(date);
+    const [hours, minutes] = appointmentTime.split(":").map(Number);
+    appointmentDate.setHours(hours, minutes, 0, 0);
+
+    console.log(user?.id);
+    console.log(doctorIdToUse);
+    console.log(typeof doctorIdToUse);
+    const { error } = await supabase.from("appointments").insert([
+      {
+        doctor_id: doctorIdToUse,
+        patient_id: user?.id,
+        hospital_id: parseInt(selectedHospitalId),
+        date: appointmentDate.toISOString(),
+        title: appointmentTitle,
+        description: appointmentDescription,
+        duration: 30,
+        type: "In-person",
+        created_by: parseInt(selectedHospitalId),
+        status: "pending",
+      },
+    ]);
+
+    if (error) {
       toast({
-        title: "Incomplete form",
-        description: "Please fill in all required fields.",
+        title: "Error",
+        description: error.message || "Failed to schedule appointment",
         variant: "destructive",
       });
       return;
     }
 
-    const appointmentDate = new Date(date);
-    const [hours, minutes] = appointmentTime.split(":").map(Number);
-    appointmentDate.setHours(hours, minutes);
-
-    createAppointmentMutation.mutate({
-      doctor_id: doctorIdToUse,
-      patient_id: user?.id,
-      hospital_id: selectedHospitalId,
-      date: appointmentDate.toISOString(),
-      title: appointmentTitle,
-      description: appointmentDescription,
-      duration: 30,
-      status: "pending",
+    toast({
+      title: "Appointment scheduled",
+      description: "Your appointment has been successfully scheduled.",
     });
+
+    setIsNewAppointmentOpen(false);
+    setSelectedDoctor("");
+    setAppointmentTime("");
+    setAppointmentTitle("");
+    setAppointmentDescription("");
+
+    // Refresh appointments
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
   };
 
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>("");
@@ -296,18 +298,18 @@ export default function PatientAppointments() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex gap-4 mb-4">
-                  <Select value={filterDoctor} onValueChange={setFilterDoctor}>
+                  {/* <Select value={filterDoctor} onValueChange={setFilterDoctor}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by doctor" />
                     </SelectTrigger>
                     <SelectContent>
                       {doctors?.map((d: any) => (
                         <SelectItem key={d.id} value={d.id.toString()}>
-                          Dr. {d.firstName} {d.lastName}
+                          Dr. {d.first_name} {d.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </Select> */}
 
                   <Select
                     value={filterHospital}
@@ -317,6 +319,9 @@ export default function PatientAppointments() {
                       <SelectValue placeholder="Filter by hospital" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all-hospitals">
+                        All Hospitals
+                      </SelectItem>
                       {hospitals?.map((h: any) => (
                         <SelectItem key={h.id} value={h.id.toString()}>
                           {h.name}
@@ -324,27 +329,6 @@ export default function PatientAppointments() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <Tabs
-                    defaultValue="upcoming"
-                    onValueChange={setTab}
-                    className="w-full sm:w-auto"
-                  >
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                      <TabsTrigger value="completed">Past</TabsTrigger>
-                      <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="gap-1">
-                      <ListFilter className="h-4 w-4" />
-                      Filter
-                    </Button>
-                  </div>
                 </div>
 
                 <div>
@@ -395,7 +379,7 @@ export default function PatientAppointments() {
                                     "h:mm a"
                                   )}
                                 </p>
-                                {getStatusBadge(appointment.status)}
+                                {/* {getStatusBadge(appointment.status)} */}
                               </div>
                               <p className="text-sm text-neutral-600">
                                 Dr. {appointment.doctor.firstName}{" "}
@@ -511,92 +495,87 @@ export default function PatientAppointments() {
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="symptoms">Enter your symptoms</Label>
-                <Textarea
-                  id="symptoms"
-                  placeholder="e.g. headache, sore throat, fatigue..."
-                  value={symptoms}
-                  onChange={(e) => setSymptoms(e.target.value)}
-                />
-              </div>
-
-              <Button
-                onClick={async () => {
-                  if (!symptoms) return;
-                  setIsLoadingDiagnosis(true);
-                  setPredictedDisease(null);
-                  try {
-                    const response = await fetch(
-                      "https://api.cropview.aquilla.dev/plant/detect",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ symptoms }),
-                      }
-                    );
-                    const result = await response.json();
-                    setPredictedDisease(result?.disease || "Unknown issue");
-                  } catch (err) {
-                    setPredictedDisease("Error fetching diagnosis.");
-                  }
-                  setIsLoadingDiagnosis(false);
-                }}
-                disabled={!symptoms || isLoadingDiagnosis}
-              >
-                {isLoadingDiagnosis
-                  ? "Analyzing..."
-                  : "Check Potential Disease"}
-              </Button>
-
-              {predictedDisease && (
-                <div className="bg-muted p-3 rounded-md mt-2 space-y-2">
-                  <p className="text-sm">
-                    🧠 <strong>Possible Condition:</strong> {predictedDisease}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsNewAppointmentOpen(false);
-                        router.push(`/triage`);
-                      }}
-                    >
-                      Go to Triage
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        // Scroll to doctor selection
-                        document
-                          .getElementById("doctor")
-                          ?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                    >
-                      Book with General Practitioner
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {selectedHospitalType === "private" && (
-                <div className="grid gap-2">
-                  {/* <Label htmlFor="doctor">Select Doctor</Label> */}
-
-                  <Label htmlFor="doctor">Select Doctor</Label>
-                  <Select
-                    value={selectedDoctor}
-                    onValueChange={setSelectedDoctor}
+                <>
+                  {" "}
+                  <div className="grid gap-2">
+                    <Label htmlFor="symptoms">Enter your symptoms</Label>
+                    <Textarea
+                      id="symptoms"
+                      placeholder="e.g. headache, sore throat, fatigue..."
+                      value={symptoms}
+                      onChange={(e) => setSymptoms(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!symptoms) return;
+                      setIsLoadingDiagnosis(true);
+                      setPredictedDisease(null);
+                      try {
+                        const response = await fetch(
+                          "https://api.cropview.aquilla.dev/plant/detect",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ symptoms }),
+                          }
+                        );
+                        const result = await response.json();
+                        setPredictedDisease(result?.disease || "Unknown issue");
+                      } catch (err) {
+                        setPredictedDisease("Error fetching diagnosis.");
+                      }
+                      setIsLoadingDiagnosis(false);
+                    }}
+                    disabled={!symptoms || isLoadingDiagnosis}
                   >
-                    <SelectTrigger id="doctor">
-                      <SelectValue placeholder="Choose a doctor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* {doctors
-                        ?.filter(
-                          (doc: any) =>
-                            doc.hospital_id === parseInt(selectedHospitalId) // ako koristiš join
-                        )
-                        .map((doctor: any) => (
+                    {isLoadingDiagnosis
+                      ? "Analyzing..."
+                      : "Check Potential Disease"}
+                  </Button>
+                  {predictedDisease && (
+                    <div className="bg-muted p-3 rounded-md mt-2 space-y-2">
+                      <p className="text-sm">
+                        🧠 <strong>Possible Condition:</strong>{" "}
+                        {predictedDisease}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsNewAppointmentOpen(false);
+                            router.push(`/triage`);
+                          }}
+                        >
+                          Go to Triage
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Scroll to doctor selection
+                            document
+                              .getElementById("doctor")
+                              ?.scrollIntoView({ behavior: "smooth" });
+                          }}
+                        >
+                          Book with General Practitioner
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid gap-2">
+                    {/* <Label htmlFor="doctor">Select Doctor</Label> */}
+
+                    <Label htmlFor="doctor">Select Doctor</Label>
+                    <Select
+                      value={selectedDoctor}
+                      onValueChange={setSelectedDoctor}
+                    >
+                      <SelectTrigger id="doctor">
+                        <SelectValue placeholder="Choose a doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hospitalDoctors.map((doctor: any) => (
                           <SelectItem
                             key={doctor.id}
                             value={doctor.id.toString()}
@@ -604,119 +583,156 @@ export default function PatientAppointments() {
                             Dr. {doctor.first_name} {doctor.last_name}
                             {doctor.specialty ? ` - ${doctor.specialty}` : ""}
                           </SelectItem>
-                        ))} */}
-                      {hospitalDoctors.map((doctor: any) => (
-                        <SelectItem
-                          key={doctor.id}
-                          value={doctor.id.toString()}
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {predictedDisease && (
+                    <div className="bg-muted p-3 rounded-md mt-2 space-y-2">
+                      <p className="text-sm">
+                        🧠 <strong>Possible Condition:</strong>{" "}
+                        {predictedDisease}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsNewAppointmentOpen(false);
+                            router.push(`/triage`);
+                          }}
                         >
-                          Dr. {doctor.first_name} {doctor.last_name}
-                          {doctor.specialty ? ` - ${doctor.specialty}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                          Go to Triage
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Scroll to doctor selection
+                            document
+                              .getElementById("doctor")
+                              ?.scrollIntoView({ behavior: "smooth" });
+                          }}
+                        >
+                          Book with General Practitioner
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="title">Reason for Visit</Label>
-              <Input
-                id="title"
-                placeholder="e.g. Annual check-up"
-                value={appointmentTitle}
-                onChange={(e) => setAppointmentTitle(e.target.value)}
-              />
-            </div>
+            {selectedHospitalId && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Reason for Visit</Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g. Annual check-up"
+                    value={appointmentTitle}
+                    onChange={(e) => setAppointmentTitle(e.target.value)}
+                  />
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {date ? (
+                            format(date, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                          disabled={(date) => {
+                            // Disable dates in the past and weekends (example)
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="time">Time</Label>
+                    <Select
+                      value={appointmentTime}
+                      onValueChange={setAppointmentTime}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      disabled={(date) => {
-                        // Disable dates in the past and weekends (example)
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        return date < today;
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                      <SelectTrigger id="time">
+                        <SelectValue placeholder="Select time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 8).map(
+                          (hour) => (
+                            <>
+                              <SelectItem
+                                key={`${hour}:00`}
+                                value={`${hour}:00`}
+                              >
+                                {`${hour > 12 ? hour - 12 : hour}:00 ${
+                                  hour >= 12 ? "PM" : "AM"
+                                }`}
+                              </SelectItem>
+                              <SelectItem
+                                key={`${hour}:30`}
+                                value={`${hour}:30`}
+                              >
+                                {`${hour > 12 ? hour - 12 : hour}:30 ${
+                                  hour >= 12 ? "PM" : "AM"
+                                }`}
+                              </SelectItem>
+                            </>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="time">Time</Label>
-                <Select
-                  value={appointmentTime}
-                  onValueChange={setAppointmentTime}
-                >
-                  <SelectTrigger id="time">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 8).map((hour) => (
-                      <>
-                        <SelectItem key={`${hour}:00`} value={`${hour}:00`}>
-                          {`${hour > 12 ? hour - 12 : hour}:00 ${
-                            hour >= 12 ? "PM" : "AM"
-                          }`}
-                        </SelectItem>
-                        <SelectItem key={`${hour}:30`} value={`${hour}:30`}>
-                          {`${hour > 12 ? hour - 12 : hour}:30 ${
-                            hour >= 12 ? "PM" : "AM"
-                          }`}
-                        </SelectItem>
-                      </>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional information about your visit"
-                value={appointmentDescription}
-                onChange={(e) => setAppointmentDescription(e.target.value)}
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Any additional information about your visit"
+                    value={appointmentDescription}
+                    onChange={(e) => setAppointmentDescription(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsNewAppointmentOpen(false)}
-              disabled={createAppointmentMutation.isPending}
+              // disabled={createAppointmentMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               onClick={handleCreateAppointment}
-              disabled={createAppointmentMutation.isPending}
+              // disabled={createAppointmentMutation.isPending}
             >
-              {createAppointmentMutation.isPending ? (
+              {false ? (
                 <>Scheduling...</>
               ) : (
                 <>
