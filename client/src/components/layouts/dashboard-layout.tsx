@@ -166,7 +166,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="border-b">
           {/* <h1 className="text-xl font-semibold">Healthcare Portal</h1> */}
           <div className="flex items-center gap-2 px-2">
-            <img src="../../../public/logo.png" className="w-24 h-24" />
+            <img src="/logo.png" className="w-24 h-24" />
             <p className="text-sm text-muted-foreground capitalize">
               {user.role} Portal
             </p>
@@ -179,12 +179,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link key={item.href} href={item.href}>
                 <Button
                   variant="ghost"
-                  className={`w-full justify-between px-3 py-2 h-auto rounded-md text-sm font-medium ${
-                    location === item.href
+                  className={`w-full justify-between px-3 py-2 h-auto rounded-md text-sm font-medium ${location === item.href
                       ? // location.startsWith(item.href + "/")
-                        "bg-primary/10 text-primary hover:bg-primary/20"
+                      "bg-primary/10 text-primary hover:bg-primary/20"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center">
                     {item.icon}

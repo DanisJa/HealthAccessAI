@@ -106,7 +106,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <img src="../../../public/logo.png" className="w-40 h-40" />
+            <img src="/logo.png" className="w-40 h-40" />
           </div>
           <CardTitle className="text-2xl font-bold text-center">
             Sign In
