@@ -15,8 +15,9 @@ import {
   ClipboardList,
   PillIcon,
   Building2,
+  Loader2,
 } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { supabase } from "@/../utils/supabaseClient"; // adjust path if needed
 
 interface Stats {
   totalpatients: number;
@@ -37,86 +38,138 @@ interface Patient {
 }
 
 interface Appointment {
-  id: string;
-  hospital_id: number;
+  id: number;
+  patientId: number;
+  patient: {
+    firstName: string;
+    lastName: string;
+  };
   date: string;
-  // …other fields your AppointmentList expects
+  duration: number;
+  title: string;
+  type?: string;
+  status: string;
+}
+
+function getAge(dob: string) {
+  const birthDate = new Date(dob);
+  const ageDiffMs = Date.now() - birthDate.getTime();
+  const ageDate = new Date(ageDiffMs);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
 }
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
-  // selectedHospitalId is just a number.  Grab the full object from the list.
+  console.log(user);
   const { hospitals, selectedHospital: selectedHospitalId } = useHospital();
-  // find the object; might be undefined until the hook populates it
   const selectedHospital =
     hospitals.find((h) => h.id === selectedHospitalId) ?? null;
-
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     null
   );
 
   // 1) Stats
-  const { data: stats = [], isLoading: isStatsLoading } = useQuery<Stats[]>({
+  const { data: stats, isLoading: isStatsLoading } = useQuery<Stats | null>({
     queryKey: ["doctorStats", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      if (!user) return [];
-      const res = await fetch(`/api/doctor/stats?doctorId=${user.id}`);
-      if (!res.ok) throw new Error("Failed to load stats");
-      return res.json();
+      const { data, error } = await supabase
+        .from("doctor_stats_view")
+        .select("*")
+        .eq("doctor_id", user!.id)
+        .single();
+      if (error) throw new Error("Failed to load stats");
+      return data;
     },
-    enabled: !!user,
   });
 
-  // 2) Recent patients
-  // Now pass the raw ID into the fetch, and lookup .id only on the object
+  // 2) Recent Patients
   const { data: patients = [], isLoading: isPatientsLoading } = useQuery<
     Patient[]
   >({
     queryKey: ["recentPatients", user?.id, selectedHospitalId],
-    enabled: !!user && selectedHospitalId !== null,
+    enabled: !!user?.id && !!selectedHospitalId,
     queryFn: async () => {
-      const url = selectedHospitalId
-        ? `/api/doctor/patients/recent?hospitalId=${selectedHospitalId}`
-        : "/api/doctor/patients/recent";
-
-      console.log(url);
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load patients");
-      return res.json();
+      const { data, error } = await supabase
+        .from("hospital_patients")
+        .select(
+          `
+          patient_id,
+          users:patient_id (
+            id,
+            first_name,
+            last_name,
+            date_of_birth,
+            gender
+          )
+        `
+        )
+        .eq("primary_doctor_id", user!.id)
+        .eq("hospital_id", selectedHospitalId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw new Error("Failed to load patients");
+      return data.map((p: any) => ({
+        id: p.patient_id,
+        firstName: p.users.first_name,
+        lastName: p.users.last_name,
+        age: getAge(p.users.date_of_birth),
+        gender: p.users.gender,
+        status: "Active",
+        lastVisit: "",
+      }));
     },
   });
 
-  // 3) Today’s appointments
+  // 3) Today’s Appointments
   const { data: appointments = [], isLoading: isAppointmentsLoading } =
     useQuery<Appointment[]>({
       queryKey: ["todayAppointments", user?.id, selectedHospital?.id],
+      enabled: !!user?.id && !!selectedHospital?.id,
       queryFn: async () => {
-        if (!user) return [];
-        const url = selectedHospital
-          ? `/api/doctor/appointments/today?hospitalId=${selectedHospital.id}`
-          : "/api/doctor/appointments/today";
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to load appointments");
-        return res.json();
-      },
-      enabled: !!user,
-    });
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
 
-  // 4) Health parameters for selected patient
-  const { data: parameters = [], isLoading: isParamsLoading } = useQuery<any[]>(
-    {
-      queryKey: ["patientParameters", selectedPatientId],
-      queryFn: async () => {
-        if (!selectedPatientId) return [];
-        const res = await fetch(
-          `/api/doctor/patients/parameters?patientId=${selectedPatientId}`
-        );
-        if (!res.ok) throw new Error("Failed to load parameters");
-        return res.json();
+        const { data, error } = await supabase
+          .from("appointments")
+          .select(
+            `
+  id,
+  date,
+  duration,
+  title,
+  type,
+  status,
+  patient_id,
+  users:patient_id (
+    first_name,
+    last_name
+  )
+`
+          )
+          .eq("doctor_id", user!.id)
+          .eq("hospital_id", selectedHospital!.id)
+          .gte("date", today.toISOString().split("T")[0])
+          .lt("date", tomorrow.toISOString().split("T")[0]);
+        console.log(data);
+        if (error) throw new Error("Failed to load appointments");
+
+        return data.map((a: any) => ({
+          id: a.id,
+          date: a.date,
+          duration: a.duration,
+          title: a.title,
+          type: a.type,
+          status: a.status,
+          patientId: a.patient_id,
+          patient: {
+            first_name: a.users?.first_name ?? "Unknown",
+            last_name: a.users?.last_name ?? "",
+          },
+        }));
       },
-      enabled: !!selectedPatientId,
-    }
-  );
+    });
 
   const isLoading =
     isStatsLoading || isPatientsLoading || isAppointmentsLoading;
@@ -133,18 +186,16 @@ export default function DoctorDashboard() {
 
   return (
     <DashboardLayout>
-      {/* Welcome */}
       <WelcomeCard
         role="doctor"
-        name={user?.firstName || ""}
+        name={user?.last_name || ""}
         stats={{
-          appointments: stats[0]?.appointmentstoday || 0,
-          reports: stats[0]?.pendingreports || 0,
+          appointments: stats?.appointmentstoday || 0,
+          reports: stats?.pendingreports || 0,
         }}
         imgUrl="https://images.unsplash.com/photo-1579684385127-1ef15d508118?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=400&q=80"
       />
 
-      {/* Hospital Info */}
       {selectedHospital && (
         <div className="flex items-center gap-2 mb-4 p-2 bg-muted/20 rounded-md">
           <Building2 className="h-5 w-5 text-primary" />
@@ -154,50 +205,40 @@ export default function DoctorDashboard() {
         </div>
       )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <StatsCard
           title="Total Patients"
-          value={stats[0]?.totalpatients || 0}
+          value={stats?.totalpatients || 0}
           icon={<Users className="h-5 w-5" />}
           color="primary"
         />
         <StatsCard
           title="Appointments Today"
-          value={stats[0]?.appointmentstoday || 0}
+          value={stats?.appointmentstoday || 0}
           icon={<Activity className="h-5 w-5" />}
           color="secondary"
         />
         <StatsCard
           title="Pending Reports"
-          value={stats[0]?.pendingreports || 0}
+          value={stats?.pendingreports || 0}
           icon={<ClipboardList className="h-5 w-5" />}
           color="accent"
         />
         <StatsCard
           title="Prescriptions Issued"
-          value={stats[0]?.prescriptionsissued || 0}
+          value={stats?.prescriptionsissued || 0}
           icon={<PillIcon className="h-5 w-5" />}
           color="primary-light"
         />
       </div>
 
-      {/* Recent Patients & Appointments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <PatientList patients={patients} isLoading={isPatientsLoading} />
+        <PatientList />
         <AppointmentList appointments={appointments} />
       </div>
 
-      {/* Health Parameters */}
-      <HealthParameters
-        patients={patients}
-        selectedPatientId={selectedPatientId}
-        onPatientSelect={setSelectedPatientId}
-        parameters={parameters}
-        isLoading={isParamsLoading}
-      />
+      <HealthParameters hospital={selectedHospital} />
 
-      {/* Chat */}
       <ChatWidget role="doctor" />
     </DashboardLayout>
   );

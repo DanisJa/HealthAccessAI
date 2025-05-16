@@ -1,134 +1,102 @@
-import { useLocation } from "wouter";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { getInitials, getStatusColor } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getInitials } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface Patient {
-  id: string; // Supabase UUID
+  id: string;
   firstName: string;
   lastName: string;
   age: number;
-  gender: string;
-  status: string;
-  lastVisit: string; // ISO timestamp
+  priority: boolean;
   avatarUrl?: string;
 }
 
-interface PatientListProps {
-  patients: Patient[];
-  isLoading?: boolean;
-}
+const mockPatients: Patient[] = [
+  {
+    id: "1",
+    firstName: "Alice",
+    lastName: "Smith",
+    age: 30,
+    priority: false,
+  },
+  {
+    id: "2",
+    firstName: "Bob",
+    lastName: "Johnson",
+    age: 42,
+    priority: true,
+  },
+  {
+    id: "3",
+    firstName: "Charlie",
+    lastName: "Brown",
+    age: 25,
+    priority: false,
+  },
+];
 
-export function PatientList({ patients, isLoading = false }: PatientListProps) {
-  const [, navigate] = useLocation();
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Recent Patients</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center h-32">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const getStatusBadge = (status: string) => (
-    <Badge className={getStatusColor(status)}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
+export function PatientList() {
+  const [queue, setQueue] = useState<Patient[]>(
+    [...mockPatients].sort((a, b) => Number(b.priority) - Number(a.priority))
   );
+
+  const handleNext = () => {
+    setQueue((prev) => prev.slice(1));
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Recent Patients</CardTitle>
+          <CardTitle>Patient Queue</CardTitle>
           <Button
-            variant="link"
+            variant="outline"
             size="sm"
-            onClick={() => navigate("/doctor/patients")}
+            onClick={handleNext}
+            disabled={queue.length === 0}
           >
-            View all
+            Next
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Patient</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Visit</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {patients.length > 0 ? (
-                patients.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Avatar className="h-8 w-8 mr-3">
-                          <AvatarImage src={patient.avatarUrl} />
-                          <AvatarFallback>
-                            {getInitials(patient.firstName, patient.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {patient.firstName} {patient.lastName}
-                          </div>
-                          <div className="text-xs text-neutral-dark">
-                            {patient.age}y, {patient.gender}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>{getStatusBadge(patient.status)}</TableCell>
-
-                    <TableCell>
-                      {new Date(patient.lastVisit).toLocaleDateString()}
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/doctor/patients/${patient.id}`)
-                        }
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">
-                    No patients found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {queue.length === 0 ? (
+          <div className="text-center text-neutral-500 py-4">
+            Queue is empty
+          </div>
+        ) : (
+          <ul className="space-y-4">
+            {queue.map((patient) => (
+              <li
+                key={patient.id}
+                className="flex items-center justify-between border p-3 rounded-md"
+              >
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-3">
+                    <AvatarImage src={patient.avatarUrl} />
+                    <AvatarFallback>
+                      {getInitials(patient.firstName, patient.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">
+                      {patient.firstName} {patient.lastName}
+                    </div>
+                    <div className="text-xs text-neutral-dark">
+                      {patient.age} years old
+                    </div>
+                  </div>
+                </div>
+                {patient.priority && (
+                  <Badge className="bg-red-100 text-red-600">Priority</Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
