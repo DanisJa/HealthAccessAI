@@ -28,22 +28,22 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
 
   const getAppointmentTime = (appointment: Appointment) => {
     if (appointment.time) return appointment.time;
-    
+
     const date = new Date(appointment.date);
     const endTime = new Date(date.getTime() + appointment.duration * 60000);
-    
+
     return `${formatTime(date)} - ${formatTime(endTime)}`;
   };
 
   const getAppointmentTypeBadge = (type: string = "Check-up") => {
-    let className = "bg-primary bg-opacity-10 text-primary";
-    
+    let className = "bg-primary bg-opacity-10 text-white";
+
     if (type === "New Patient") {
       className = "bg-secondary bg-opacity-10 text-secondary";
     } else if (type === "Urgent") {
       className = "bg-accent bg-opacity-10 text-accent";
     }
-    
+
     return (
       <Badge className={`${className} text-xs px-2 py-1 rounded-full`}>
         {type}
@@ -56,7 +56,11 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle>Today's Appointments</CardTitle>
-          <Button variant="link" size="sm" onClick={() => navigate("/doctor/appointments")}>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => navigate("/doctor/appointments")}
+          >
             View schedule
           </Button>
         </div>
@@ -65,11 +69,13 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
         <div className="space-y-3">
           {appointments.length > 0 ? (
             appointments.map((appointment) => (
-              <div 
-                key={appointment.id} 
+              <div
+                key={appointment.id}
                 className="flex p-3 border border-neutral-light rounded-lg hover:bg-neutral-lightest"
               >
-                <span className="material-icons text-primary mr-3">schedule</span>
+                <span className="material-icons text-primary mr-3">
+                  schedule
+                </span>
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <p className="font-medium">
@@ -78,7 +84,9 @@ export function AppointmentList({ appointments }: AppointmentListProps) {
                     {getAppointmentTypeBadge(appointment.type)}
                   </div>
                   <p className="text-sm text-neutral-dark">
-                    {appointment.patient.firstName} {appointment.patient.lastName} - {appointment.title}
+                    {appointment.patient.first_name}{" "}
+                    {appointment.patient.last_name} - {appointment.title}
+                    {console.log("aaa" + appointment)}
                   </p>
                 </div>
               </div>
