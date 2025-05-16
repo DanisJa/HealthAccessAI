@@ -32,12 +32,19 @@ import {
   Legend,
 } from "recharts";
 import { PlusCircle } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient"; // keep for mutation invalidation
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
+import { useAuth } from "@/hooks/use-auth"; // ← pull in the user
+import { supabase } from "@/../utils/supabaseClient"; // ← your Supabase client
+import { useHospital } from "@/hooks/use-hospital";
+
 export default function PatientHealth() {
+  const { user } = useAuth(); // ← get logged-in user
+  const { hospital } = useHospital();
+
   const [isNewParameterOpen, setIsNewParameterOpen] = useState(false);
   const [parameterType, setParameterType] = useState("blood_pressure");
   const [parameterValue, setParameterValue] = useState("");
@@ -47,35 +54,76 @@ export default function PatientHealth() {
 
   const { toast } = useToast();
 
-  const { data: parameters, isLoading } = useQuery({
-    queryKey: ["/api/patient/parameters"],
+  const {
+    data: parameters = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["parameters", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parameters")
+        .select("id, type, value, unit, notes, recorded_at") // or use alias syntax
+        .eq("patient_id", user!.id)
+        .order("recorded_at", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    onError: (err) => {
+      console.error("Supabase fetch error:", err);
+      toast({
+        title: "Failed to load parameters",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const addParameterMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/patient/parameters", data);
-      return res.json();
+    mutationFn: async (newParam: {
+      type: string;
+      value: string;
+      unit: string;
+      notes?: string;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("parameters")
+        .insert([
+          {
+            type: newParam.type,
+            value: newParam.value,
+            unit: newParam.unit,
+            notes: newParam.notes,
+            patient_id: user.id,
+            hospital_id: 1,
+            recorded_at: new Date().toISOString(),
+          },
+        ])
+        .select(); // return the inserted row if you need it
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast({
         title: "Parameter added",
         description: "Your health parameter has been successfully recorded.",
       });
-      setIsNewParameterOpen(false);
-      setParameterValue("");
-      setParameterNotes("");
-      queryClient.invalidateQueries({ queryKey: ["/api/patient/parameters"] });
+      // close dialog, reset inputs…
+      queryClient.invalidateQueries({ queryKey: ["parameters", user?.id] });
     },
-    onError: (error) => {
+    onError: (err: any) => {
       toast({
         title: "Failed to add parameter",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
+        description: err.message,
         variant: "destructive",
       });
     },
   });
-
   const getUnitByType = (type: string) => {
     switch (type) {
       case "blood_pressure":
@@ -119,7 +167,7 @@ export default function PatientHealth() {
     return params
       .filter((param) => param.type === type)
       .map((param) => ({
-        date: new Date(param.recordedAt).toLocaleDateString(),
+        date: new Date(param.recorded_at).toLocaleDateString(),
         value: parseFloat(param.value),
         unit: param.unit,
       }))
@@ -168,7 +216,7 @@ export default function PatientHealth() {
 
     const latest = filtered.sort(
       (a: any, b: any) =>
-        new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
+        new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime()
     )[0];
 
     return `${latest.value} ${latest.unit}`;
