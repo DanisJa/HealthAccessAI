@@ -110,21 +110,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 	// Get doctor dashboard stats
 	app.get('/api/doctor/stats', async (req, res) => {
-		if (!req.session?.userId) {
-			return res.status(401).json({ message: 'Not authenticated' });
+		const doctorId = req.query.doctorId;
+
+		const { data, error } = await supabase
+			.from('doctor_stats_view')
+			.select()
+			.eq('doctor_id', doctorId);
+
+		console.log(data, error);
+
+		if (error) {
+			res.status(500).json({ error: error });
+			return;
 		}
 
-		try {
-			const user = await storage.getUser(req.session.userId);
-			if (!user || user.role !== 'doctor') {
-				return res.status(403).json({ message: 'Forbidden' });
-			}
-
-			const stats = await storage.getDoctorStats(user.id);
-			res.status(200).json(stats);
-		} catch (error) {
-			res.status(500).json({ message: 'Failed to get doctor stats' });
-		}
+		res.status(200).json(data);
 	});
 
 	// Get recent patients for doctor
