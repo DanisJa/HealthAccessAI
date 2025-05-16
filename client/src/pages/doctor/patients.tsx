@@ -32,6 +32,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 
+const fetchPatientsByHospital = async (
+  hospitalId: string,
+  doctorId: string
+) => {
+  const response = await fetch(
+    `/api/doctor/patients?hospitalId=${hospitalId}&doctorId=${doctorId}`
+  );
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
+
 export default function DoctorPatients() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -39,7 +52,10 @@ export default function DoctorPatients() {
 
   const { data: patients, isLoading } = useQuery({
     queryKey: ["/api/doctor/patients", tab, page, search],
+    queryFn: () => fetchPatientsByHospital("hospitalId", "doctorId"),
   });
+
+  console.log("Patients data:", patients);
 
   const totalPages = 5; // This should come from API
 
