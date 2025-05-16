@@ -50,8 +50,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: error.message });
     }
 
-    console.log("Login data:", data);
-
     res.status(201).json(data);
   });
 
@@ -91,19 +89,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Bad request, need doctor ID." });
     }
 
-    console.log(doctorId);
-
     const { data, error } = await supabase
       .from("doctor_hospitals_view")
       .select()
       .eq("doctor_id", doctorId);
 
-    console.log(data, error);
-
     if (error) {
       res.status(500).json({ error: error });
       return;
     }
+
+    res.status(200).json(data);
+  });
+
+  app.get("/api/doctor/patients", async (req, res) => {
+    const { doctorId, hopsitalId } = req.query;
+
+    const { data, error } = await supabase
+      .from("doctor_patients_view")
+      .select();
+
+    console.log("Error: ", error);
+    console.log("Data: ", data);
+
+    if (error) throw new Error(error.message);
 
     res.status(200).json(data);
   });
@@ -117,8 +126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .select()
       .eq("doctor_id", doctorId);
 
-    console.log(data, error);
-
     if (error) {
       res.status(500).json({ error: error });
       return;
@@ -130,9 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get recent patients for doctor
   app.get("/api/doctor/patients/recent", async (req, res) => {
     // 1) Auth check
-    console.log("------------------------------");
-    console.log(req.session);
-    console.log("------------------------------");
     if (!req.session?.userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
