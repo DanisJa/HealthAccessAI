@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, Suspense, lazy } from "react";
 import SupabaseTest from "./components/supabase-test";
 import OnlineTriagePage from "./pages/patient/triage";
+import { BrowserRouter } from "react-router-dom";
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
   const { user, isLoading, isAuthenticated, hasRole } = useAuth();
@@ -249,12 +250,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="health-iot-theme">
         <AuthProvider>
-          <ChatProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </ChatProvider>
+          <BrowserRouter>
+            <ChatProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </ChatProvider>
+          </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
