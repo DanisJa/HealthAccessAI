@@ -69,6 +69,17 @@ export function PatientList() {
 		if (queue.length === 0) return;
 		const [nextPatient, ...rest] = queue;
 		setQueue(rest); // optimistically remove
+		console.log('Next patient:', nextPatient, 'speechSynthesis' in window);
+		// Text to speech to call the next patient
+		if ('speechSynthesis' in window) {
+			const message = `Next patient, ${nextPatient.firstName} ${nextPatient.lastName}`;
+			const utterance = new SpeechSynthesisUtterance(message);
+			console.log('Calling next patient:', message);
+			window.speechSynthesis.speak(utterance);
+		} else {
+			console.warn('Text-to-speech not supported in this browser.');
+		}
+
 		completeMutation.mutate(nextPatient.id);
 	};
 
