@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stethoscope } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function OnlineTriagePage() {
+export default function OnlineTriageDoctorPage() {
   const user = useAuth();
   const usr = user.user;
 
@@ -22,7 +22,7 @@ export default function OnlineTriagePage() {
     symptoms: "",
     age: usr?.dateOfBirth
       ? new Date().getFullYear() - new Date(usr.dateOfBirth).getFullYear()
-      : 2,
+      : 20,
     weight: "",
     height: "",
     bloodPressure: "",
@@ -32,6 +32,10 @@ export default function OnlineTriagePage() {
 
   const [loading, setLoading] = useState(false);
   const [prediction, setPrediction] = useState("");
+  const [predictionICD, setPredictionICD] = useState("");
+
+  const [showModal, setShowModal] = useState(false);
+  const [medications, setMedications] = useState<{ medication: string; recommended_dosage: string }[]>([]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -47,18 +51,39 @@ export default function OnlineTriagePage() {
       const response = await fetch("http://localhost:8000/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ text: formData.symptoms }),
       });
 
       if (!response.ok) throw new Error("Prediction failed");
 
       const data = await response.json();
-      setPrediction(data.prediction || "No result returned.");
+      setPrediction(data.predicted_disease || "No result returned.");
+      setPredictionICD(data.icd_code || "No ICD code returned.");
     } catch (error) {
       setPrediction("Failed to fetch prediction.");
     }
 
     setLoading(false);
+  };
+
+  const handleGetMedication = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/medication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ icd: predictionICD, age: formData.age }),
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch medications");
+
+      const data = await response.json();
+      setMedications(data.medications || []);
+
+    } catch (error) {
+      setMedications([]);
+    } finally {
+      setShowModal(true);
+    }
   };
 
   return (
@@ -128,17 +153,54 @@ export default function OnlineTriagePage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Consulting AI..." : "Get Prediction"}
-          </Button>
 
-          {prediction && (
+
+          {prediction ? (
             <div className="p-4 bg-muted/30 rounded-md text-sm text-center">
-              <strong>Prediction:</strong> {prediction}
+              <strong>Prediction:</strong> {prediction} <br />
+              <Button className="mt-2" onClick={handleGetMedication}>
+                Recommend Medicine
+              </Button>
             </div>
-          )}
+          ) : <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Consulting AI..." : "Get Prediction"}
+          </Button>}
         </CardFooter>
       </Card>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Recommended Medication</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            {medications.length > 0 ? (
+              <div >
+                <ul className="space-y-2">
+                  {medications.map((med, idx) => (
+                    <li key={idx} className="text-sm">
+                      <strong>{med.medication}</strong> – {med.recommended_dosage}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-center mt-5">
+                  <Button onClick={() => { window.location.reload(); }}>
+                    Ok
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">No medications found.</p>
+            )}
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
