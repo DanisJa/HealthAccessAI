@@ -122,6 +122,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           href: "/doctor/settings",
           label: "Settings",
           icon: <Settings className="h-5 w-5" />,
+
+        },
+        {
+          href: "/doctor/triage",
+          label: "Online Triage",
+          icon: <Stethoscope className="h-5 w-5" />,
         },
       ];
     } else if (user.role === "hospital") {
@@ -180,9 +186,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Button
                   variant="ghost"
                   className={`w-full justify-between px-3 py-2 h-auto rounded-md text-sm font-medium ${location === item.href
-                      ? // location.startsWith(item.href + "/")
-                      "bg-primary/10 text-primary hover:bg-primary/20"
-                      : "text-gray-700 hover:bg-gray-100"
+                    ? // location.startsWith(item.href + "/")
+                    "bg-primary/10 text-primary hover:bg-primary/20"
+                    : "text-gray-700 hover:bg-gray-100"
                     }`}
                 >
                   <div className="flex items-center">
