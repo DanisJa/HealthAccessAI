@@ -227,8 +227,8 @@ Interested in running Medi locally or trying it out? Below are instructions to g
 **1. Clone this repository to your local machine.**
 
 ```bash
-git clone https://github.com/your-username/medi-platform.git
-cd medi-platform
+git clone https://github.com/DanisJa/HealthAccessAI
+cd HealthAccessAI
 ```
 
 **2. Install dependencies:**
@@ -252,7 +252,7 @@ VITE_SUPABASE_ANON_KEY=public-anon-key-goes-here
 **4. Start the development server: **
 Once env vars are set, run:
 ```
-npm run dev || npm run dev1
+npm run dev || npm run dev1 (if on windows)
 ```
 
 This will launch the web app on a local dev server (usually at http://localhost:5000 or http://localhost:5001 for Vite).
@@ -339,20 +339,13 @@ Ensure to set any required environment variables for these functions (e.g., secr
 
    - Create a Python virtual environment and activate it:
 
-     ```bash
-     python -m venv venv
+  ```
+  https://github.com/DanisJa/disease-classifier
+  ```
+
+    To run the build:
      ```
-
-   - Install requirements (this would include FastAPI, Uvicorn, and possibly transformers for the models):
-
-     ```bash
-     pip install -r requirements.txt
-     ```
-
-   - Run the server (adjust module/name as needed):
-
-     ```bash
-     uvicorn main:app --reload
+     docker compose up --build
      ```
 
      This will start the API on `http://localhost:8000` by default.
