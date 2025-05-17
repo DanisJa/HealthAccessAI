@@ -1,4 +1,4 @@
-import OnlineTriageDoctorPage from "./pages/doctor/triage";
+import OnlineTriageDoctorPage from './pages/doctor/triage';
 import { Switch, Route, useLocation, Redirect } from 'wouter';
 import { queryClient } from './lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -34,7 +34,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, Suspense, lazy } from 'react';
 import SupabaseTest from './components/supabase-test';
 import OnlineTriagePage from './pages/patient/triage';
-import OnlineTriageDoctorPage from './pages/doctor/triage';
 import { BrowserRouter } from 'react-router-dom';
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
@@ -109,51 +108,6 @@ function Router() {
 					{() => <ProtectedRoute component={Settings} />}
 				</Route>
 
-        {/* Doctor routes */}
-        <Route path="/doctor">
-          {() => (
-            <ProtectedRoute component={DoctorDashboard} roles={["doctor"]} />
-          )}
-        </Route>
-        <Route path="/doctor/patients">
-          {() => (
-            <ProtectedRoute component={DoctorPatients} roles={["doctor"]} />
-          )}
-        </Route>
-        <Route path="/doctor/medical-records">
-          {() => (
-            <ProtectedRoute
-              component={DoctorMedicalRecords}
-              roles={["doctor"]}
-            />
-          )}
-        </Route>
-        <Route path="/doctor/appointments">
-          {() => (
-            <ProtectedRoute component={DoctorAppointments} roles={["doctor"]} />
-          )}
-        </Route>
-        <Route path="/doctor/prescriptions">
-          {() => (
-            <ProtectedRoute
-              component={DoctorPrescriptions}
-              roles={["doctor"]}
-            />
-          )}
-        </Route>
-        <Route path="/doctor/analytics">
-          {() => (
-            <ProtectedRoute component={DoctorAnalytics} roles={["doctor"]} />
-          )}
-        </Route>
-        <Route path="/doctor/triage">
-          {() => (
-            <ProtectedRoute component={OnlineTriageDoctorPage} roles={["doctor"]} />
-          )}
-        </Route>
-        <Route path="/doctor/settings">
-          {() => <ProtectedRoute component={Settings} roles={["doctor"]} />}
-        </Route>
 				{/* Doctor routes */}
 				<Route path="/doctor">
 					{() => (
@@ -202,11 +156,62 @@ function Router() {
 				<Route path="/doctor/settings">
 					{() => <ProtectedRoute component={Settings} roles={['doctor']} />}
 				</Route>
-        <Route path="/doctor/triage">
-          {() => (
-            <ProtectedRoute component={OnlineTriageDoctorPage} roles={["doctor"]} />
-          )}
-        </Route>
+				{/* Doctor routes */}
+				<Route path="/doctor">
+					{() => (
+						<ProtectedRoute component={DoctorDashboard} roles={['doctor']} />
+					)}
+				</Route>
+				<Route path="/doctor/patients">
+					{() => (
+						<ProtectedRoute component={DoctorPatients} roles={['doctor']} />
+					)}
+				</Route>
+				<Route path="/doctor/medical-records">
+					{() => (
+						<ProtectedRoute
+							component={DoctorMedicalRecords}
+							roles={['doctor']}
+						/>
+					)}
+				</Route>
+				<Route path="/doctor/appointments">
+					{() => (
+						<ProtectedRoute component={DoctorAppointments} roles={['doctor']} />
+					)}
+				</Route>
+				<Route path="/doctor/prescriptions">
+					{() => (
+						<ProtectedRoute
+							component={DoctorPrescriptions}
+							roles={['doctor']}
+						/>
+					)}
+				</Route>
+				<Route path="/doctor/analytics">
+					{() => (
+						<ProtectedRoute component={DoctorAnalytics} roles={['doctor']} />
+					)}
+				</Route>
+				<Route path="/doctor/triage">
+					{() => (
+						<ProtectedRoute
+							component={OnlineTriageDoctorPage}
+							roles={['doctor']}
+						/>
+					)}
+				</Route>
+				<Route path="/doctor/settings">
+					{() => <ProtectedRoute component={Settings} roles={['doctor']} />}
+				</Route>
+				<Route path="/doctor/triage">
+					{() => (
+						<ProtectedRoute
+							component={OnlineTriageDoctorPage}
+							roles={['doctor']}
+						/>
+					)}
+				</Route>
 
 				{/* Patient routes */}
 				<Route path="/patient">
