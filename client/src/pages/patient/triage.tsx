@@ -47,13 +47,13 @@ export default function OnlineTriagePage() {
       const response = await fetch("http://localhost:8000/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ text: formData.symptoms }),
       });
 
       if (!response.ok) throw new Error("Prediction failed");
 
       const data = await response.json();
-      setPrediction(data.prediction || "No result returned.");
+      setPrediction(data.predicted_disease || "No result returned.");
     } catch (error) {
       setPrediction("Failed to fetch prediction.");
     }

@@ -119,16 +119,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: <MessageSquare className="h-5 w-5" />,
         },
         {
+          href: "/doctor/triage",
+          label: "Online Triage",
+          icon: <Stethoscope className="h-5 w-5" />,
+        },
+        {
           href: "/doctor/settings",
           label: "Settings",
           icon: <Settings className="h-5 w-5" />,
 
         },
-        {
-          href: "/doctor/triage",
-          label: "Online Triage",
-          icon: <Stethoscope className="h-5 w-5" />,
-        },
+
       ];
     } else if (user.role === "hospital") {
       return [
