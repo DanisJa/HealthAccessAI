@@ -1,33 +1,56 @@
 import { Express, Request, Response } from 'express';
+import OpenAI from 'openai';
 import { isAuthenticated } from './auth';
+import dotenv from 'dotenv';
+dotenv.config(); // Must be early, before accessing process.env
 
-const openaiApiKey = process.env.VITE_OPENAI_KEY || 'demo-key';
+// Initialize OpenAI API client (v4+ syntax)
+const openai = new OpenAI({
+	apiKey: process.env.OPENAI_KEY,
+});
 
-// Setup chatbot routes
 export function setupChatbot(app: Express) {
-	// Create chatbot endpoint
 	app.post(
 		'/api/chatbot',
 		isAuthenticated,
 		async (req: Request, res: Response) => {
 			try {
 				const { message, role } = req.body;
-
 				if (!message) {
 					return res.status(400).json({ message: 'Message is required' });
 				}
 
-				// Generate response based on user role
-				let response;
+				// Choose prompt and temperature by role
+				let systemPrompt: string;
+				let temperature: number;
 				if (role === 'patient') {
-					response = await openai.generatePatientResponse(message);
+					systemPrompt =
+						'You are a compassionate medical assistant. Respond to patient inquiries in clear, simple language, without medical jargon. Provide empathetic and supportive answers.';
+					temperature = 0.7;
 				} else if (role === 'doctor') {
-					response = await openai.generateDoctorResponse(message);
+					systemPrompt =
+						'You are an expert medical assistant for healthcare professionals. Provide concise, technical responses with supporting medical reasoning and references when appropriate.';
+					temperature = 0.3;
 				} else {
-					response = "I'm your health assistant. How can I help you today?";
+					return res.json({
+						message: "I'm your health assistant. How can I help you today?",
+					});
 				}
 
-				res.json({ message: response });
+				const messages = [
+					{ role: 'system', content: systemPrompt },
+					{ role: 'user', content: message },
+				];
+
+				// Call OpenAI API
+				const completion = await openai.chat.completions.create({
+					model: 'gpt-4o-mini',
+					messages: messages[0].content,
+				});
+
+				const responseText =
+					completion.choices?.[0]?.message?.content?.trim() ?? '';
+				res.json({ message: responseText });
 			} catch (error) {
 				console.error('Chatbot error:', error);
 				res.status(500).json({ message: 'Failed to process chatbot request' });
