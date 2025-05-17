@@ -60,7 +60,6 @@ function getAge(dob: string) {
 
 export default function DoctorDashboard() {
 	const { user } = useAuth();
-	console.log(user);
 	const { hospitals, selectedHospital: selectedHospitalId } = useHospital();
 	const selectedHospital =
 		hospitals.find((h) => h.id === selectedHospitalId) ?? null;
@@ -114,7 +113,6 @@ export default function DoctorDashboard() {
 					.eq('hospital_id', selectedHospital!.id)
 					.gte('date', today.toISOString().split('T')[0])
 					.lt('date', tomorrow.toISOString().split('T')[0]);
-				console.log(data);
 				if (error) throw new Error('Failed to load appointments');
 
 				return data.map((a: any) => ({
