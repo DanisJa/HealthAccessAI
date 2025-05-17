@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/../utils/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,26 +23,19 @@ import {
 } from "@/components/ui/pagination";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Search,
   RefreshCw,
   Pill,
   FileClock,
   AlertTriangle,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/lib/utils";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { navigate } from "wouter/use-browser-location";
+
+const PAGE_SIZE = 5;
 
 interface Medication {
   id: number;
@@ -50,28 +45,99 @@ interface Medication {
   startDate: string;
   endDate?: string;
   status: string;
+  instructions?: string;
   doctor: {
-    id: number;
+    id: string;
     firstName: string;
     lastName: string;
-    avatarUrl?: string;
   };
-  instructions?: string;
+}
+
+type FetchResult = {
+  data: Medication[];
+  count: number;
+};
+
+async function fetchMedications({
+  queryKey,
+}: {
+  queryKey: [string, "active" | "completed" | "all", number, string, string];
+}): Promise<FetchResult> {
+  const [, tab, page, search, userId] = queryKey;
+
+  let builder = supabase
+    .from("prescriptions")
+    .select(
+      `
+        id,
+        medication,
+        dosage,
+        frequency,
+        start_date,
+        end_date,
+        status,
+        instructions,
+        doctor:users!prescriptions_doctor_id_fkey(
+          id,
+          first_name,
+          last_name
+        )
+      `,
+      { count: "exact" }
+    )
+    .eq("patient_id", userId);
+
+  if (tab !== "all") {
+    builder = builder.eq("status", tab);
+  }
+  if (search) {
+    builder = builder.ilike("medication", `%${search}%`);
+  }
+
+  const from = (page - 1) * PAGE_SIZE;
+  const to = page * PAGE_SIZE - 1;
+
+  const { data, count, error } = await builder.range(from, to);
+  if (error) throw error;
+
+  const meds = (data || []).map((m: any) => ({
+    id: m.id,
+    medication: m.medication,
+    dosage: m.dosage,
+    frequency: m.frequency,
+    startDate: m.start_date,
+    endDate: m.end_date || undefined,
+    status: m.status,
+    instructions: m.instructions || undefined,
+    doctor: {
+      id: m.doctor.id,
+      firstName: m.doctor.first_name,
+      lastName: m.doctor.last_name,
+    },
+  }));
+
+  return { data: meds, count: count ?? 0 };
 }
 
 export default function PatientMedications() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState("active");
-  const [selectedMedication, setSelectedMedication] =
-    useState<Medication | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [tab, setTab] = useState<"active" | "completed" | "all">("active");
 
-  const { data: medications, isLoading } = useQuery({
-    queryKey: ["/api/patient/medications", tab, page, search],
-  });
+  const { data: medResult = { data: [], count: 0 }, isLoading } =
+    useQuery<FetchResult>({
+      queryKey: ["patient_medications", tab, page, search, user?.id ?? ""],
+      queryFn: fetchMedications,
+      enabled: !!user,
+      keepPreviousData: true,
+    });
 
-  const totalPages = 3; // Should come from API
+  const meds = medResult.data;
+  const totalPages = Math.max(1, Math.ceil(medResult.count / PAGE_SIZE));
+
+  // whenever user switches tab or search term, go back to page 1
+  useEffect(() => setPage(1), [tab, search]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -90,16 +156,12 @@ export default function PatientMedications() {
     }
   };
 
-  const viewMedicationDetails = (medication: Medication) => {
-    setSelectedMedication(medication);
-    setIsDetailsOpen(true);
-  };
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold font-heading">My Medications</h1>
+          <h1 className="text-2xl font-bold">My Medications</h1>
         </div>
 
         <Card>
@@ -107,259 +169,149 @@ export default function PatientMedications() {
             <CardTitle>Current and Past Medications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="relative w-full md:w-96">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search medications..."
-                    className="pl-10"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-                <Button size="icon" variant="ghost">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
+              </TabsList>
 
-              <Tabs defaultValue="active" onValueChange={setTab}>
-                <TabsList className="grid w-full md:w-auto grid-cols-3">
-                  <TabsTrigger value="active">Active</TabsTrigger>
-                  <TabsTrigger value="completed">Completed</TabsTrigger>
-                  <TabsTrigger value="all">All</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              <div className="border rounded-md">
-                {isLoading ? (
-                  <div className="p-4 space-y-4">
-                    {Array(5)
-                      .fill(0)
-                      .map((_, i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                          <Skeleton className="h-12 w-12 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Medication</TableHead>
-                        <TableHead>Dosage</TableHead>
-                        <TableHead>Frequency</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>End Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {medications && medications.length > 0 ? (
-                        medications.map((medication: Medication) => (
-                          <TableRow key={medication.id}>
-                            <TableCell>{medication.medication}</TableCell>
-                            <TableCell>{medication.dosage}</TableCell>
-                            <TableCell>{medication.frequency}</TableCell>
-                            <TableCell>
-                              {format(
-                                new Date(medication.startDate),
-                                "MMM d, yyyy"
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {medication.endDate
-                                ? format(
-                                    new Date(medication.endDate),
-                                    "MMM d, yyyy"
-                                  )
-                                : "Ongoing"}
-                            </TableCell>
-                            <TableCell>
-                              {getStatusBadge(medication.status)}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  viewMedicationDetails(medication)
-                                }
-                              >
-                                View Details
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-6">
-                            No medications found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
-
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (pageNum) => (
-                      <PaginationItem key={pageNum}>
-                        <Button
-                          variant={pageNum === page ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => setPage(pageNum)}
-                        >
-                          {pageNum}
-                        </Button>
-                      </PaginationItem>
-                    )
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
+              <TabsContent value="active">
+                <MedicationTable />
+              </TabsContent>
+              <TabsContent value="completed">
+                <MedicationTable />
+              </TabsContent>
+              <TabsContent value="all">
+                <MedicationTable />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
 
-      {/* Medication Details Dialog */}
-      {selectedMedication && (
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Medication Details</DialogTitle>
-              <DialogDescription>
-                Detailed information about your medication.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="py-4">
-              <div className="flex items-center space-x-3 mb-6">
-                <Avatar>
-                  <AvatarImage src={selectedMedication.doctor.avatarUrl} />
-                  <AvatarFallback>
-                    {getInitials(
-                      selectedMedication.doctor.firstName,
-                      selectedMedication.doctor.lastName
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    Prescribed by: Dr. {selectedMedication.doctor.firstName}{" "}
-                    {selectedMedication.doctor.lastName}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(
-                      new Date(selectedMedication.startDate),
-                      "MMMM d, yyyy"
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Medication</p>
-                  <p className="font-medium flex items-center">
-                    <Pill className="mr-2 h-4 w-4 text-primary" />
-                    {selectedMedication.medication}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium">
-                    {getStatusBadge(selectedMedication.status)}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Dosage</p>
-                  <p className="font-medium">{selectedMedication.dosage}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Frequency</p>
-                  <p className="font-medium">{selectedMedication.frequency}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium flex items-center">
-                    <FileClock className="mr-2 h-4 w-4 text-neutral-500" />
-                    {format(
-                      new Date(selectedMedication.startDate),
-                      "MMMM d, yyyy"
-                    )}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">
-                    {selectedMedication.endDate
-                      ? format(
-                          new Date(selectedMedication.endDate),
-                          "MMMM d, yyyy"
-                        )
-                      : "Ongoing"}
-                  </p>
-                </div>
-              </div>
-
-              {selectedMedication.instructions && (
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-2">Special Instructions</h4>
-                  <p className="text-sm">{selectedMedication.instructions}</p>
-                </div>
-              )}
-
-              <div className="bg-yellow-50 border border-yellow-100 rounded-md p-4 mt-6 flex">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-yellow-700">
-                  <p className="font-medium">Important Reminders</p>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>Take this medication as prescribed by your doctor.</li>
-                    <li>
-                      Do not skip doses or stop taking without consulting your
-                      doctor.
-                    </li>
-                    <li>Report any unusual side effects promptly.</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-                Close
-              </Button>
-              <Button>Request Refill</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
       <ChatWidget role="patient" />
     </DashboardLayout>
   );
+
+  function MedicationTable() {
+    return (
+      <div className="space-y-4">
+        {/* Search + Refresh */}
+        <div className="flex items-center justify-between">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              className="pl-10"
+              placeholder="Search medications…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              /* optionally call refetch if you capture it from useQuery */
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Table or loading skeleton */}
+        <div className="border rounded-md">
+          {isLoading ? (
+            <div className="p-4 space-y-4">
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[250px]" />
+                    <Skeleton className="h-4 w-[200px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Medication</TableHead>
+                  <TableHead>Dosage</TableHead>
+                  <TableHead>Frequency</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {meds.length > 0 ? (
+                  meds.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell>{m.medication}</TableCell>
+                      <TableCell>{m.dosage}</TableCell>
+                      <TableCell>{m.frequency}</TableCell>
+                      <TableCell>
+                        {format(new Date(m.startDate), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        {m.endDate
+                          ? format(new Date(m.endDate), "MMM d, yyyy")
+                          : "Ongoing"}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(m.status)}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate("/patient/medical-records")}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-6">
+                      No medications found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <PaginationItem key={i}>
+                <Button
+                  size="icon"
+                  variant={i + 1 === page ? "default" : "outline"}
+                  onClick={() => setPage(i + 1)}
+                >
+                  {i + 1}
+                </Button>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    );
+  }
 }
