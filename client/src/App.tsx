@@ -144,6 +144,11 @@ function Router() {
 						<ProtectedRoute component={DoctorAnalytics} roles={['doctor']} />
 					)}
 				</Route>
+				<Route path="/doctor/triage">
+					{() => (
+						<ProtectedRoute component={OnlineTriagePage} roles={['doctor']} />
+					)}
+				</Route>
 				<Route path="/doctor/settings">
 					{() => <ProtectedRoute component={Settings} roles={['doctor']} />}
 				</Route>
