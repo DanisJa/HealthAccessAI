@@ -131,7 +131,7 @@ export function MessageList({ type }: MessageListProps) {
       </div>
 
       {messages.map((message: Message) => (
-        <Link key={message.id} href={`/messages/thread/${message.id}`}>
+        <div key={message.id}>
           <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
             <CardContent className="p-4">
               <div className="flex justify-between items-start">
@@ -167,7 +167,7 @@ export function MessageList({ type }: MessageListProps) {
               </p>
             </CardContent>
           </Card>
-        </Link>
+        </div>
       ))}
 
       {totalPages > 1 && (
