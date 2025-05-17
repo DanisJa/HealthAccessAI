@@ -1,5 +1,3 @@
-# 📘 GitHub README for Medi HealthTech Platform
-
 # Medi – AI-Powered Hospital Management Platform
 
 ## 🎯 Project Name: Medi
