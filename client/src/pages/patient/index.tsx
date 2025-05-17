@@ -36,15 +36,17 @@ export default function PatientDashboard() {
         .eq("status", "active");
 
       const today = new Date().toISOString().split("T")[0];
-      const { count: remindersToday = 0 } = await supabase
-        .from("reminders")
-        .select("*", { head: true, count: "exact" })
-        .eq("user_id", patientId)
-        .gte("due_date", today)
-        .lt(
-          "due_date",
-          new Date(Date.now() + 86400000).toISOString().split("T")[0]
-        );
+      const { data, error } = await supabase
+        .from("queue")
+        .select("*")
+        .neq("status", "completed")
+        .order("created_at", { ascending: true });
+
+
+      console.log("Queue Data:", data, " + ", user?.id);
+      const queuePosition = data.findIndex(item => item.patient_id === user?.id) + 1;
+      console.log("Queue Position:", queuePosition);
+
 
       const { count: newReports = 0 } = await supabase
         .from("medical_reports")
@@ -55,10 +57,12 @@ export default function PatientDashboard() {
       return {
         upcomingAppointments,
         activeMedications,
-        remindersToday,
+        queuePosition,
         newReports,
       };
     },
+    refetchInterval: 500,
+
   });
 
   // 2) Upcoming Appointments
@@ -146,10 +150,7 @@ export default function PatientDashboard() {
       {selectedHospital && (
         <div className="flex items-center gap-2 mb-4 p-2 bg-muted/20 rounded-md">
           <Building2 className="h-5 w-5 text-primary" />
-          <span className="text-sm font-medium">
-            Currently viewing: {selectedHospital.name} ({selectedHospital.type})
-            — {selectedHospital.municipality}
-          </span>
+
         </div>
       )}
 
@@ -168,8 +169,8 @@ export default function PatientDashboard() {
           color="secondary"
         />
         <StatsCard
-          title="Reminders Today"
-          value={stats?.remindersToday || 0}
+          title="Currently in Queue"
+          value={stats?.queuePosition || 0}
           icon={<Bell className="h-5 w-5" />}
           color="accent"
         />
