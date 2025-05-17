@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, Suspense, lazy } from 'react';
 import SupabaseTest from './components/supabase-test';
 import OnlineTriagePage from './pages/patient/triage';
+import OnlineTriageDoctorPage from './pages/doctor/triage';
 import { BrowserRouter } from 'react-router-dom';
 
 function ProtectedRoute({ component: Component, roles, ...rest }: any) {
@@ -188,6 +189,14 @@ function Router() {
 				<Route path="/doctor/analytics">
 					{() => (
 						<ProtectedRoute component={DoctorAnalytics} roles={['doctor']} />
+					)}
+				</Route>
+				<Route path="/doctor/triage">
+					{() => (
+						<ProtectedRoute
+							component={OnlineTriageDoctorPage}
+							roles={['doctor']}
+						/>
 					)}
 				</Route>
 				<Route path="/doctor/settings">
